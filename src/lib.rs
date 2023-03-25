@@ -1,5 +1,10 @@
 pub mod dilithium2;
+pub mod fips202;
+pub mod ntt;
 pub mod params;
+pub mod poly;
+pub mod reduce;
+pub mod rounding;
 
 #[cfg(test)]
 mod tests {
