@@ -1,4 +1,5 @@
-use crate::params::{Q, lvl3::GAMMA2};
+use crate::params::{Q, lvl3};
+const GAMMA2: i32 = lvl3::GAMMA2 as i32;
 
 /// For finite field element a, compute high and low bits a0, a1 such that a mod^+ Q = a1*ALPHA + a0 with -ALPHA/2 < a0 <= ALPHA/2 except if a1 = (Q-1)/ALPHA where we set a1 = 0 and -ALPHA/2 <= a0 = a mod^+ Q - Q < 0. Assumes a to be standard
 /// representative.

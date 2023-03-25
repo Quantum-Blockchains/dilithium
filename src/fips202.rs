@@ -470,3 +470,19 @@ pub fn shake256(output: &mut [u8], mut outlen: usize, input: &[u8], inlen: usize
     let idx = nblocks * SHAKE256_RATE;
     shake256_squeeze(&mut output[idx..], outlen, &mut state);
 }
+
+pub fn shake128_stream_init(state: &mut KeccakState, seed: &[u8], nonce: u16) {
+    let t = [nonce as u8, (nonce >> 8) as u8];
+    state.init();
+    shake128_absorb(state, seed, crate::params::SEEDBYTES as usize);
+    shake128_absorb(state, &t, 2);
+    shake128_finalize(state);
+}
+
+pub fn shake256_stream_init(state: &mut KeccakState, seed: &[u8], nonce: u16) {
+    let t = [nonce as u8, (nonce >> 8) as u8];
+    state.init();
+    shake256_absorb(state, seed, crate::params::CRHBYTES as usize);
+    shake256_absorb(state, &t, 2);
+    shake256_finalize(state);
+}
