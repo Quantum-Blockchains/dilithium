@@ -3,6 +3,7 @@ pub mod fips202;
 pub mod ntt;
 pub mod params;
 pub mod poly;
+pub mod polyvec;
 pub mod rounding;
 pub mod reduce;
 
