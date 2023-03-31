@@ -1,11 +1,13 @@
 pub mod dilithium2;
 pub mod fips202;
 pub mod ntt;
+pub mod packing;
 pub mod params;
 pub mod poly;
 pub mod polyvec;
 pub mod rounding;
 pub mod reduce;
+pub mod sign;
 
 #[cfg(test)]
 mod tests {

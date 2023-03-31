@@ -41,9 +41,10 @@ pub fn matrix_expand(mat: &mut [Polyvecl], rho: &[u8]) {
 /// Pointwise multiply vectors of polynomials of length L, multiply resulting vector by 2^{-32} and add (accumulate) polynomials in it.
 /// Input/output vectors are in NTT domain representation. Input coefficients are assumed to be less than 22*Q. Output coeffcient are less than 2*L*Q.
 pub fn l_pointwise_acc_montgomery(w: &mut Poly, u: &Polyvecl, v: &Polyvecl) {
-    *w = poly::pointwise_montgomery(&u.vec[0], &v.vec[0]);
+    poly::pointwise_montgomery(w, &u.vec[0], &v.vec[0]);
+    let mut t = Poly::default();
     for i in 1..L {
-        let t = poly::pointwise_montgomery(&u.vec[i], &v.vec[i]);
+        poly::pointwise_montgomery(&mut t, &u.vec[i], &v.vec[i]);
         poly::add_ip(w, &t);
     }
 }
@@ -95,8 +96,17 @@ pub fn l_invntt_tomont(v: &mut Polyvecl) {
 
 pub fn l_pointwise_poly_montgomery(r: &mut Polyvecl, a: &Poly, v: &Polyvecl) {
     for i in 0..L {
-        r.vec[i] = poly::pointwise_montgomery(a, &v.vec[i]);
+        poly::pointwise_montgomery(&mut r.vec[i], a, &v.vec[i]);
     }
+}
+
+pub fn l_chknorm(v: &Polyvecl, bound: i32) -> u8 {
+    for i in 0..L {
+        if poly::chknorm(&v.vec[i], bound) > 0 {
+            return 1;
+        } 
+    }
+    0
 }
 
 //---------------------------------
@@ -171,7 +181,7 @@ pub fn k_invntt_tomont(v: &mut Polyveck) {
 
 pub fn k_pointwise_poly_montgomery(r: &mut Polyveck, a: &Poly, v: &Polyveck) {
     for i in 0..K {
-        r.vec[i] = poly::pointwise_montgomery(a, &v.vec[i]);
+        poly::pointwise_montgomery(&mut r.vec[i], a, &v.vec[i]);
     }
 }
 
@@ -181,7 +191,7 @@ pub fn k_pointwise_poly_montgomery(r: &mut Polyveck, a: &Poly, v: &Polyveck) {
 /// Returns 0 if norm of all polynomials are strictly smaller than B and 1 otherwise.
 pub fn k_chknorm(v: &Polyveck, bound: i32) -> u8 {
     for i in 0..K {
-        if poly::chknorm(&v.vec[i], bound) == 1 {
+        if poly::chknorm(&v.vec[i], bound) > 0 {
             return 1;
         }
     }
@@ -190,41 +200,30 @@ pub fn k_chknorm(v: &Polyveck, bound: i32) -> u8 {
 
 /// For all coefficients a of polynomials in vector of length K, compute a0, a1 such that a mod Q = a1*2^D + a0 with -2^{D-1} < a0 <= 2^{D-1}.
 /// Assumes coefficients to be standard representatives.
-pub fn k_power2round(v: &Polyveck) -> (Polyveck, Polyveck) {
-    let mut v0 = Polyveck::default();
-    let mut v1 = Polyveck::default();
+pub fn k_power2round(v1: &mut Polyveck, v0: &mut Polyveck) {
     for i in 0..K {
-        (v0.vec[i], v1.vec[i]) = poly::power2round(&v.vec[i]);
+        poly::power2round(&mut v1.vec[i], &mut v0.vec[i]);
     }
-    (v0, v1)
 }
 
-pub fn k_decompose(v: &Polyveck) -> (Polyveck, Polyveck) {
-    let mut v0 = Polyveck::default();
-    let mut v1 = Polyveck::default();
+pub fn k_decompose(v1: &mut Polyveck, v0: &mut Polyveck) {
     for i in 0..K {
-        (v0.vec[i], v1.vec[i]) = poly::lvl2::decompose(&v.vec[i]);
+        poly::lvl2::decompose(&mut v1.vec[i], &mut v0.vec[i]);
     }
-    (v0, v1)
 }
 
-pub fn k_make_hint(v0: &Polyveck, v1: &Polyveck) -> (Polyveck, i32) {
-    let mut v = Polyveck::default();
+pub fn k_make_hint(h: &mut Polyveck, v0: &Polyveck, v1: &Polyveck) -> i32 {
     let mut s: i32 = 0;
-    let mut tmp: i32;
     for i in 0..K {
-        (v.vec[i], tmp) = poly::lvl2::make_hint(&v0.vec[i], &v1.vec[i]);
-        s += tmp;
+        s += poly::lvl2::make_hint(&mut h.vec[i], &v0.vec[i], &v1.vec[i]);
     }
-    (v, s)
+    s
 }
 
-pub fn k_use_hint(a: &Polyveck, hint: &Polyveck) -> Polyveck {
-    let mut v = Polyveck::default();
+pub fn k_use_hint(a: &mut Polyveck, hint: &Polyveck) {
     for i in 0..K {
-        v.vec[i] = poly::lvl2::use_hint(&a.vec[i], &hint.vec[i]);
+        poly::lvl2::use_hint(&mut a.vec[i], &hint.vec[i]);
     }
-    v
 }
 
 pub fn k_pack_w1(r: &mut [u8], a: &Polyveck) {

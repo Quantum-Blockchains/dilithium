@@ -125,12 +125,10 @@ pub fn invntt_tomont(a: &mut Poly) {
 /// * 'b' - 2nd input polynomial
 /// 
 /// Returns resulting polynomial
-pub fn pointwise_montgomery(a: &Poly, b: &Poly) -> Poly {
-    let mut c = Poly::default();
+pub fn pointwise_montgomery(c: &mut Poly, a: &Poly, b: &Poly) {
     for i in 0..N {
         c.coeffs[i] = reduce::montgomery_reduce(a.coeffs[i] as i64 * b.coeffs[i] as i64);
     }
-    c
 }
 
 /// For all coefficients c of the input polynomial, compute c0, c1 such that c mod Q = c1*2^D + c0 with -2^{D-1} < c0 <= 2^{D-1}.
@@ -141,13 +139,10 @@ pub fn pointwise_montgomery(a: &Poly, b: &Poly) -> Poly {
 /// * 'a' - input polynomial
 /// 
 /// Returns a touple of polynomials with coefficients c0, c1
-pub fn power2round(a: &Poly) -> (Poly, Poly) {
-    let mut a0 = Poly::default();
-    let mut a1 = Poly::default();
+pub fn power2round(a1: &mut Poly, a0: &mut Poly) {
     for i in 0..N {
-        (a0.coeffs[i], a1.coeffs[i]) = rounding::power2round(a.coeffs[i]);
+        (a0.coeffs[i], a1.coeffs[i]) = rounding::power2round(a1.coeffs[i]);
     }
-    (a0, a1)
 }
 
 /// Check infinity norm of polynomial against given bound.
@@ -163,10 +158,17 @@ pub fn chknorm(a: &Poly, b: i32) -> i32 {
     if b > (params::Q - 1)/ 8 {
         return 1;
     }
-    for i in a.coeffs.iter() {
-        let mut t = *i >> 31;
-        t = *i - (t & 2 * *i);
-        if t.ge(&b) {
+    // for i in a.coeffs.iter() {
+    //     let mut t = *i >> 31;
+    //     t = *i - (t & 2 * *i);
+    //     if t.ge(&b) {
+    //         return 1;
+    //     }
+    // }
+    for i in 0..N {
+        let mut t = a.coeffs[i] >> 31;
+        t = a.coeffs[i] - (t & 2 * a.coeffs[i]);
+        if t >= b {
             return 1;
         }
     }
@@ -213,7 +215,7 @@ pub fn uniform(a: &mut Poly, seed: &[u8], nonce: u16) {
     while ctr < N {
         let off = buflen % 3;
         for i in 0..off {
-            buf[i] = buf[buflen - off + 1];
+            buf[i] = buf[buflen - off + i];
         }           
         buflen = fips202::SHAKE128_RATE + off;
         fips202::shake128_squeezeblocks(&mut buf[off..], 1, &mut state);
@@ -223,7 +225,7 @@ pub fn uniform(a: &mut Poly, seed: &[u8], nonce: u16) {
 
 /// Bit-pack polynomial t1 with coefficients fitting in 10 bits.
 /// Input coefficients are assumed to be standard representatives.
-pub fn polyt1_pack(r: &mut [u8], a: &Poly) {
+pub fn t1_pack(r: &mut [u8], a: &Poly) {
     for i in 0..N / 4 {
         r[5 * i + 0] = (a.coeffs[4 * i + 0] >> 0) as u8;
         r[5 * i + 1] = ((a.coeffs[4 * i + 0] >> 8) | (a.coeffs[4 * i + 1] << 2)) as u8;
@@ -235,7 +237,7 @@ pub fn polyt1_pack(r: &mut [u8], a: &Poly) {
 
 /// Unpack polynomial t1 with 9-bit coefficients.
 /// Output coefficients are standard representatives.
-pub fn polyt1_unpack(r: &mut Poly, a: &[u8]) {
+pub fn t1_unpack(r: &mut Poly, a: &[u8]) {
     for i in 0..N / 4 {
         r.coeffs[4 * i + 0] = (((a[5 * i + 0] >> 0) as u32 | (a[5 * i + 1] as u32) << 8) & 0x3FF) as i32;
         r.coeffs[4 * i + 1] = (((a[5 * i + 1] >> 2) as u32 | (a[5 * i + 2] as u32) << 6) & 0x3FF) as i32;
@@ -245,7 +247,7 @@ pub fn polyt1_unpack(r: &mut Poly, a: &[u8]) {
 }
 
 /// Bit-pack polynomial t0 with coefficients in [-2^{D-1}, 2^{D-1}].
-pub fn polyt0_pack(r: &mut [u8], a: &Poly) {
+pub fn t0_pack(r: &mut [u8], a: &Poly) {
     let mut t = [0i32; 8];
 
     for i in 0..N / 8 {
@@ -283,7 +285,7 @@ pub fn polyt0_pack(r: &mut [u8], a: &Poly) {
 
 /// Unpack polynomial t0 with coefficients in ]-2^{D-1}, 2^{D-1}].
 /// Output coefficients lie in ]Q-2^{D-1},Q+2^{D-1}].
-pub fn polyt0_unpack(r: &mut Poly, a: &[u8]) {
+pub fn t0_unpack(r: &mut Poly, a: &[u8]) {
     for i in 0..N / 8 {
         r.coeffs[8 * i + 0] = a[13 * i + 0] as i32;
         r.coeffs[8 * i + 0] |= (a[13 * i + 1] as i32) << 8;

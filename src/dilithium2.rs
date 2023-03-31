@@ -12,12 +12,13 @@ pub struct Keypair {
 
 impl Keypair {
     pub fn generate(entropy: Option<&[u8]>) -> Keypair {
-        //TODO
-        let mut bytes = [0u8; KEYPAIRBYTES];
-        if let Some(x) = entropy {
-            bytes[..x.len()].copy_from_slice(&x);
+        let mut pk = [0u8; PUBLICKEYBYTES];
+        let mut sk = [0u8; SECRETKEYBYTES];
+        crate::sign::lvl2::keypair(&mut pk, &mut sk, entropy);
+        Keypair{
+            secret: sk,
+            public: pk
         }
-        Keypair::from_bytes(&bytes)
     }
 
     pub fn to_bytes(&self) -> [u8; KEYPAIRBYTES] {

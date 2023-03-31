@@ -13,7 +13,7 @@ impl Default for KeccakState {
     fn default() -> Self {
         KeccakState {
             s: [0u64; 25],
-            pos: 0usize,
+            pos: 0,
         }
     }
 }
@@ -474,7 +474,7 @@ pub fn shake256(output: &mut [u8], mut outlen: usize, input: &[u8], inlen: usize
 pub fn shake128_stream_init(state: &mut KeccakState, seed: &[u8], nonce: u16) {
     let t = [nonce as u8, (nonce >> 8) as u8];
     state.init();
-    shake128_absorb(state, seed, crate::params::SEEDBYTES as usize);
+    shake128_absorb(state, seed, crate::params::SEEDBYTES);
     shake128_absorb(state, &t, 2);
     shake128_finalize(state);
 }
@@ -482,7 +482,7 @@ pub fn shake128_stream_init(state: &mut KeccakState, seed: &[u8], nonce: u16) {
 pub fn shake256_stream_init(state: &mut KeccakState, seed: &[u8], nonce: u16) {
     let t = [nonce as u8, (nonce >> 8) as u8];
     state.init();
-    shake256_absorb(state, seed, crate::params::CRHBYTES as usize);
+    shake256_absorb(state, seed, crate::params::CRHBYTES);
     shake256_absorb(state, &t, 2);
     shake256_finalize(state);
 }
