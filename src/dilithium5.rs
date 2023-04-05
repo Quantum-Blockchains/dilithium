@@ -1,6 +1,6 @@
-pub const SECRETKEYBYTES: usize = crate::params::lvl2::SECRETKEYBYTES;
-pub const PUBLICKEYBYTES: usize = crate::params::lvl2::PUBLICKEYBYTES;
-pub const SIGNBYTES: usize = crate::params::lvl2::SIGNBYTES;
+pub const SECRETKEYBYTES: usize = crate::params::lvl5::SECRETKEYBYTES;
+pub const PUBLICKEYBYTES: usize = crate::params::lvl5::PUBLICKEYBYTES;
+pub const SIGNBYTES: usize = crate::params::lvl5::SIGNBYTES;
 pub const KEYPAIRBYTES: usize = SECRETKEYBYTES + PUBLICKEYBYTES;
 
 pub type  Signature = [u8; SIGNBYTES];
@@ -14,7 +14,7 @@ impl Keypair {
     pub fn generate(entropy: Option<&[u8]>) -> Keypair {
         let mut pk = [0u8; PUBLICKEYBYTES];
         let mut sk = [0u8; SECRETKEYBYTES];
-        crate::sign::lvl2::keypair(&mut pk, &mut sk, entropy);
+        crate::sign::lvl5::keypair(&mut pk, &mut sk, entropy);
         Keypair{
             secret: sk,
             public: pk

@@ -1,4 +1,6 @@
 pub mod dilithium2;
+pub mod dilithium3;
+pub mod dilithium5;
 pub mod fips202;
 pub mod ntt;
 pub mod packing;
