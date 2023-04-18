@@ -4,7 +4,7 @@ const UNIFORM_NBLOCKS: usize = (767 + fips202::SHAKE128_RATE) / fips202::SHAKE12
 const D_SHL: i32 = 1 << (params::D - 1);
 
 /// Represents a polynomial
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Poly {
     pub coeffs: [i32; N]
 }

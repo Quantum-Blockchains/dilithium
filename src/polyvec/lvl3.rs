@@ -1,3 +1,5 @@
+use std::mem::swap;
+
 use crate::{params, poly, poly::Poly};
 
 const L: usize = params::lvl3::L;
@@ -206,32 +208,25 @@ pub fn k_power2round(v1: &mut Polyveck, v0: &mut Polyveck) {
     }
 }
 
-pub fn k_decompose(v: &Polyveck) -> (Polyveck, Polyveck) {
-    let mut v0 = Polyveck::default();
-    let mut v1 = Polyveck::default();
+pub fn k_decompose(v1: &mut Polyveck, v0: &mut Polyveck) {
     for i in 0..K {
-        (v0.vec[i], v1.vec[i]) = poly::lvl3::decompose(&v.vec[i]);
+        poly::lvl3::decompose(&mut v1.vec[i], &mut v0.vec[i]);
     }
-    (v0, v1)
+    swap(v1, v0);
 }
 
-pub fn k_make_hint(v0: &Polyveck, v1: &Polyveck) -> (Polyveck, i32) {
-    let mut v = Polyveck::default();
+pub fn k_make_hint(h: &mut Polyveck, v0: &Polyveck, v1: &Polyveck) -> i32 {
     let mut s: i32 = 0;
-    let mut tmp: i32;
     for i in 0..K {
-        (v.vec[i], tmp) = poly::lvl3::make_hint(&v0.vec[i], &v1.vec[i]);
-        s += tmp;
+        s += poly::lvl3::make_hint(&mut h.vec[i], &v0.vec[i], &v1.vec[i]);
     }
-    (v, s)
+    s
 }
 
-pub fn k_use_hint(a: &Polyveck, hint: &Polyveck) -> Polyveck {
-    let mut v = Polyveck::default();
+pub fn k_use_hint(a: &mut Polyveck, hint: &Polyveck) {
     for i in 0..K {
-        v.vec[i] = poly::lvl3::use_hint(&a.vec[i], &hint.vec[i]);
+        poly::lvl3::use_hint(&mut a.vec[i], &hint.vec[i]);
     }
-    v
 }
 
 pub fn k_pack_w1(r: &mut [u8], a: &Polyveck) {

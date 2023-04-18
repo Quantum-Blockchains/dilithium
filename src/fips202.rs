@@ -3,7 +3,7 @@ pub const SHAKE256_RATE: usize = 136;
 
 const NROUNDS: usize = 24;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct KeccakState {
     pub s: [u64; 25],
     pub pos: usize,
@@ -364,7 +364,10 @@ fn keccak_squeeze(
         let mut i = pos;
         let mut idx = 0;
         while i < r && i < pos + outlen {
+            // println!("i = {}", i);
+            // println!("out[idx] przed przypisaniem: {}", out[idx]);
             out[idx] = (s[i / 8] >> 8 * (i % 8)) as u8;
+            // println!("out[idx] po przypisaniu: {}", out[idx]);
             idx += 1;
             i += 1;
         }

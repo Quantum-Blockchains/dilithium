@@ -131,7 +131,7 @@ pub fn unpack_sig(
     z: &mut Polyvecl,
     h: &mut Polyveck,
     sig: &[u8],
-) -> Result<(), ()> {
+) -> bool {
     c[..params::SEEDBYTES].copy_from_slice(&sig[..params::SEEDBYTES]);
     
     let mut idx = params::SEEDBYTES;
@@ -143,11 +143,11 @@ pub fn unpack_sig(
     let mut k: usize = 0;
     for i in 0..K {
         if sig[idx + params::lvl3::OMEGA + i] < k as u8 || sig[idx + params::lvl3::OMEGA + i] > params::lvl3::OMEGA as u8 {
-            return Err(());
+            return false;
         }
         for j in k..sig[idx + params::lvl3::OMEGA + i] as usize {
             if j > k && sig[idx + j as usize] <= sig[idx + j as usize - 1] {
-                return Err(());
+                return false;
             }
             h.vec[i].coeffs[sig[idx + j] as usize] = 1;
         }
@@ -156,9 +156,9 @@ pub fn unpack_sig(
 
     for j in k..params::lvl3::OMEGA {
         if sig[idx + j as usize] > 0 {
-            return Err(());
+            return false;
         }
     }
 
-    Ok(())
+    true
 }

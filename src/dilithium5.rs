@@ -35,16 +35,16 @@ impl Keypair {
         }
     }
 
-    pub fn sign(&self, _msg: &[u8]) -> Signature {
-        //TODO
-        [0u8; SIGNBYTES]
+    pub fn sign(&self, msg: &[u8]) -> Signature {
+        let mut sig: Signature = [0u8; SIGNBYTES];
+        crate::sign::lvl5::signature(&mut sig, msg, &self.secret, false);
+        sig
     }
 
-    pub fn verify(&self, _msg: &[u8], sig: &[u8], _pk: &[u8]) -> bool {
+    pub fn verify(&self, msg: &[u8], sig: &[u8]) -> bool {
         if sig.len() != SIGNBYTES {
             return false;
         }
-        //TODO
-        return true;
+        return crate::sign::lvl5::verify(sig, msg, &self.public);
     }
 }

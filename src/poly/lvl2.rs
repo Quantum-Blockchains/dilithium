@@ -116,7 +116,7 @@ pub fn uniform_gamma1(a: &mut Poly, seed: &[u8], nonce: u16) {
 pub fn challenge(c: &mut Poly, seed: &[u8]) {
     let mut state = fips202::KeccakState::default();
     fips202::shake256_absorb(&mut state, seed, params::SEEDBYTES);
-    fips202::shake128_finalize(&mut state);
+    fips202::shake256_finalize(&mut state);
 
     let mut buf = [0u8; fips202::SHAKE256_RATE];
     fips202::shake256_squeezeblocks(&mut buf, 1, &mut state);

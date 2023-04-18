@@ -1,9 +1,11 @@
+use std::mem::swap;
+
 use crate::{params, poly, poly::Poly};
 
 const L: usize = params::lvl2::L;
 const K: usize = params::lvl2::K;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Polyveck {
     pub vec: [Poly; K]
 }
@@ -16,7 +18,7 @@ impl Default for Polyveck {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Polyvecl {
     pub vec: [Poly; L]
 }
@@ -210,6 +212,7 @@ pub fn k_decompose(v1: &mut Polyveck, v0: &mut Polyveck) {
     for i in 0..K {
         poly::lvl2::decompose(&mut v1.vec[i], &mut v0.vec[i]);
     }
+    swap(v1, v0);
 }
 
 pub fn k_make_hint(h: &mut Polyveck, v0: &Polyveck, v1: &Polyveck) -> i32 {

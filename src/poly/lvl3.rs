@@ -12,13 +12,10 @@ const UNIFORM_GAMMA1_NBLOCKS: usize = (params::lvl3::POLYZ_PACKEDBYTES + fips202
 /// * 'a' - input polynomial
 ///
 /// Returns a touple of polynomials with coefficients c0, c1
-pub fn decompose(a: &Poly) -> (Poly, Poly) {
-    let mut a0 = Poly::default();
-    let mut a1 = Poly::default();
+pub fn decompose(a1: &mut Poly, a0: &mut Poly) {
     for i in 0..N {
-        (a0.coeffs[i], a1.coeffs[i]) = rounding::lvl3::decompose(a.coeffs[i]);
+        (a1.coeffs[i], a0.coeffs[i]) = rounding::lvl3::decompose(a1.coeffs[i]);
     }
-    (a0, a1)
 }
 
 /// Compute hint polynomial, the coefficients of which indicate whether the low bits of the corresponding coefficient of the input polynomial overflow into the high bits.
@@ -29,14 +26,13 @@ pub fn decompose(a: &Poly) -> (Poly, Poly) {
 /// * 'a1' - low part of input polynomial
 ///
 /// Returns the hint polynomial and the number of 1s
-pub fn make_hint(a0: &Poly, a1: &Poly) -> (Poly, i32) {
-    let mut hint = Poly::default();
+pub fn make_hint(h: &mut Poly, a0: &Poly, a1: &Poly) -> i32 {
     let mut s: i32 = 0;
     for i in 0..N {
-        hint.coeffs[i] = rounding::lvl3::make_hint(a0.coeffs[i], a1.coeffs[i]);
-        s += hint.coeffs[i];
+        h.coeffs[i] = rounding::lvl3::make_hint(a0.coeffs[i], a1.coeffs[i]);
+        s += h.coeffs[i];
     }
-    (hint, s)
+    s
 }
 
 /// Use hint polynomial to correct the high bits of a polynomial.
@@ -47,12 +43,10 @@ pub fn make_hint(a0: &Poly, a1: &Poly) -> (Poly, i32) {
 /// * 'hint' - hint polynomial
 ///
 /// Returns polynomial with corrected high bits
-pub fn use_hint(a: &Poly, hint: &Poly) -> Poly {
-    let mut result = Poly::default();
+pub fn use_hint(a: &mut Poly, hint: &Poly) {
     for i in 0..N {
-        result.coeffs[i] = rounding::lvl3::use_hint(a.coeffs[i], hint.coeffs[i]);
+        a.coeffs[i] = rounding::lvl3::use_hint(a.coeffs[i], hint.coeffs[i]);
     }
-    result
 }
 
 /// Use hint polynomial to correct the high bits of a polynomial in place.
@@ -120,7 +114,7 @@ pub fn uniform_gamma1(a: &mut Poly, seed: &[u8], nonce: u16) {
 pub fn challenge(c: &mut Poly, seed: &[u8]) {
     let mut state = fips202::KeccakState::default();
     fips202::shake256_absorb(&mut state, seed, params::SEEDBYTES);
-    fips202::shake128_finalize(&mut state);
+    fips202::shake256_finalize(&mut state);
 
     let mut buf = [0u8; fips202::SHAKE256_RATE];
     fips202::shake256_squeezeblocks(&mut buf, 1, &mut state);
