@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["power2round","For finite field element a, compute high and low bits a0, a1 such that a mod^+ Q = a1*2^D + a0 with -2^{D-1} < a0 <= 2^{D-1}. Assumes a to be standard representative."]],"mod":[["lvl2",""],["lvl3",""],["lvl5",""]]};

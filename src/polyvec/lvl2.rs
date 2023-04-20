@@ -5,7 +5,7 @@ use crate::{params, poly, poly::Poly};
 const L: usize = params::lvl2::L;
 const K: usize = params::lvl2::K;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct Polyveck {
     pub vec: [Poly; K]
 }
@@ -18,7 +18,7 @@ impl Default for Polyveck {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct Polyvecl {
     pub vec: [Poly; L]
 }
@@ -121,7 +121,7 @@ pub fn k_uniform_eta(v: &mut Polyveck, seed: &[u8], mut nonce: u16) {
 }
 
 /// Reduce coefficients of polynomials in vector of length K
-/// to representatives in [0,2*Q].
+/// to representatives in \[0,2*Q\].
 pub fn k_reduce(v: &mut Polyveck)
 {
   for i in 0..K {

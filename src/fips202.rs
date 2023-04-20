@@ -3,7 +3,8 @@ pub const SHAKE256_RATE: usize = 136;
 
 const NROUNDS: usize = 24;
 
-#[derive(Copy, Clone, Debug)]
+/// 1600-bit state of the algorithm, with an index of curent position.
+#[derive(Copy, Clone)]
 pub struct KeccakState {
     pub s: [u64; 25],
     pub pos: usize,
@@ -19,13 +20,21 @@ impl Default for KeccakState {
 }
 
 impl KeccakState {
+    /// Set the state to the initial form.
     pub fn init(&mut self) {
         self.s.fill(0);
         self.pos = 0;
     }
 }
 
-/// No rolling defined in the language :(
+/// No rolling defined in the language so got to do it ourselfs :(
+/// 
+/// # Arguments
+/// 
+/// * 'a' - number to rotate right
+/// * 'offset' - how many places to rotate
+/// 
+/// Returns the rotated number
 fn rol(a: u64, offset: u64) -> u64 {
     (a << offset) ^ (a >> (64 - offset))
 }

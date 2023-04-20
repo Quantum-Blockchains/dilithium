@@ -9,6 +9,12 @@ use crate::{
 const K: usize = params::lvl2::K;
 const L: usize = params::lvl2::L;
 
+/// Generate random bytes.
+/// 
+/// # Arguments
+/// 
+/// * 'bytes' - an array to fill with random data
+/// * 'n' - number of bytes to generate
 fn random_bytes(bytes: &mut [u8], n: usize) {
     rand::prelude::thread_rng()
         .try_fill_bytes(&mut bytes[..n])
@@ -21,7 +27,7 @@ fn random_bytes(bytes: &mut [u8], n: usize) {
 ///
 /// * 'pk' - preallocated buffer for public key
 /// * 'sk' - preallocated buffer for private key
-/// * 'seed' - optional seed; if None thread_rng() is used for randomness generation
+/// * 'seed' - optional seed; if None [random_bytes()] is used for randomness generation
 pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
     let mut init_seed = [0u8; params::SEEDBYTES];
     match seed {
@@ -72,6 +78,14 @@ pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
     packing::lvl2::pack_sk(sk, &rho, &tr, &key, &t0, &s1, &s2);
 }
 
+/// Compute a signature for a given message from a private (secret) key.
+///
+/// # Arguments
+///
+/// * 'sig' - preallocated with at least SIGNBYTES buffer
+/// * 'msg' - message to sign
+/// * 'sk' - private key to use
+/// * 'randomized' - indicates wether to randomize the signature or to act deterministicly
 pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
     let mut rho = [0u8; params::SEEDBYTES];
     let mut tr = [0u8; params::SEEDBYTES];
@@ -170,6 +184,15 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
     }
 }
 
+/// Verify a signature for a given message with a public key.
+/// 
+/// # Arguments
+/// 
+/// * 'sig' - signature to verify
+/// * 'm' - message that is claimed to be signed
+/// * 'pk' - public key
+/// 
+/// Returns 'true' if the verification process was successful, 'false' otherwise
 pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
     let mut buf = [0u8; K * crate::params::lvl2::POLYW1_PACKEDBYTES];
     let mut rho = [0u8; params::SEEDBYTES];

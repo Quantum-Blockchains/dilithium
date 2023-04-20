@@ -121,7 +121,7 @@ pub fn k_uniform_eta(v: &mut Polyveck, seed: &[u8], mut nonce: u16) {
 }
 
 /// Reduce coefficients of polynomials in vector of length K
-/// to representatives in [0,2*Q].
+/// to representatives in \[0,2*Q\].
 pub fn k_reduce(v: &mut Polyveck)
 {
   for i in 0..K {

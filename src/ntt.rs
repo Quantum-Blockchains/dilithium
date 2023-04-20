@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 /// A much needed cast.
 const N: usize = crate::params::N as usize;
 
@@ -98,8 +97,7 @@ pub fn invntt_tomont(a: &mut [i32]) {
 }
 
 #[cfg(test)]
-mod tests
-{
+mod tests {
     #[test]
     fn ntt() {
         let mut input: [i32; super::N] = [
@@ -143,8 +141,7 @@ mod tests
     }
 
     #[test]
-    fn invntt_tomont()
-    {
+    fn invntt_tomont() {
         let mut input: [i32; super::N] = [
             -410121, -3439227, -1510274, 1543151, -2293562, -1024787, -1768713, 3416108, -1829266, -39421, 1553720, 383193, -1303564, 2601404, 178534, 3075833,
             -1669488, 2938151, 419856, 3374895, -3659025, 2791925, -2014544, -4116040, 528058, -460960, -498884, -3726436, 1576721, 1111713, -2404662, 289307,

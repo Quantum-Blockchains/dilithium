@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":[["CRHBYTES",""],["D",""],["N",""],["POLYT0_PACKEDBYTES",""],["POLYT1_PACKEDBYTES",""],["Q",""],["R",""],["SEEDBYTES",""]],"mod":[["lvl2",""],["lvl3",""],["lvl5",""]]};

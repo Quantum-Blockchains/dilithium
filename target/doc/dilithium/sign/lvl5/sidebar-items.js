@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":[["K",""],["L",""]],"fn":[["keypair","Generate public and private key."],["random_bytes","Generate random bytes."],["signature","Compute a signature for a given message from a private (secret) key."],["verify","Verify a signature for a given message with a public key."]]};
