@@ -8,7 +8,7 @@ pub type Signature = [u8; SIGNBYTES];
 /// A pair of private and public keys.
 pub struct Keypair {
     pub secret: [u8; SECRETKEYBYTES],
-    pub public: [u8; PUBLICKEYBYTES],
+    pub public: [u8; PUBLICKEYBYTES]
 }
 
 impl Keypair {
@@ -79,5 +79,82 @@ impl Keypair {
             return false;
         }
         return crate::sign::lvl5::verify(sig, msg, &self.public);
+    }
+}
+
+/// Private key.
+pub struct SecretKey {
+    pub bytes: [u8; SECRETKEYBYTES]
+}
+
+impl SecretKey {
+    /// Returns a copy of underlying bytes.
+    pub fn to_bytes(&self) -> [u8; SECRETKEYBYTES] {
+       self.bytes.clone() 
+    }
+
+    /// Create a SecretKey from bytes.
+    /// 
+    /// # Arguments
+    /// 
+    /// * 'bytes' - private key bytes
+    /// 
+    /// Returns a SecretKey
+    pub fn from_bytes(bytes: &[u8]) -> SecretKey {
+        SecretKey {
+            bytes: bytes.try_into().expect("")
+        }
+    }
+
+    /// Compute a signature for a given message.
+    ///
+    /// # Arguments
+    ///
+    /// * 'msg' - message to sign
+    /// 
+    /// Returns a Signature
+    pub fn sign(&self, msg: &[u8]) -> Signature {
+        let mut sig: Signature = [0u8; SIGNBYTES];
+        crate::sign::lvl5::signature(&mut sig, msg, &self.bytes, false);
+        sig
+    }
+}
+
+pub struct PublicKey {
+    pub bytes: [u8; PUBLICKEYBYTES]
+}
+
+impl PublicKey {
+    /// Returns a copy of underlying bytes.
+    pub fn to_bytes(&self) -> [u8; PUBLICKEYBYTES] {
+        self.bytes.clone()
+    }
+
+    /// Create a PublicKey from bytes.
+    /// 
+    /// # Arguments
+    /// 
+    /// * 'bytes' - public key bytes
+    /// 
+    /// Returns a PublicKey
+    pub fn from_bytes(bytes: &[u8]) -> PublicKey {
+        PublicKey {
+            bytes: bytes.try_into().expect("")
+        }
+    }
+
+    /// Verify a signature for a given message with a public key.
+    /// 
+    /// # Arguments
+    /// 
+    /// * 'msg' - message that is claimed to be signed
+    /// * 'sig' - signature to verify
+    /// 
+    /// Returns 'true' if the verification process was successful, 'false' otherwise
+    pub fn verify(&self, msg: &[u8], sig: &[u8]) -> bool {
+        if sig.len() != SIGNBYTES {
+            return false;
+        }
+        return crate::sign::lvl5::verify(sig, msg, &self.bytes);
     }
 }
