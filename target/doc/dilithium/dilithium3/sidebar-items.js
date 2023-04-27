@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":[["KEYPAIRBYTES",""],["PUBLICKEYBYTES",""],["SECRETKEYBYTES",""],["SIGNBYTES",""]],"struct":[["Keypair","A pair of private and public keys."]],"type":[["Signature",""]]};

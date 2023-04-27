@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":[["lvl2",""],["lvl3",""],["lvl5",""]]};

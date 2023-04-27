@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":[["BETA",""],["CHALLENGE_ENTROPY",""],["ETA",""],["GAMMA1",""],["GAMMA2",""],["K",""],["L",""],["OMEGA",""],["POLYETA_PACKEDBYTES",""],["POLYVECH_PACKEDBYTES",""],["POLYW1_PACKEDBYTES",""],["POLYZ_PACKEDBYTES",""],["PUBLICKEYBYTES",""],["SECRETKEYBYTES",""],["SIGNBYTES",""],["TAU",""]]};
