@@ -39,3 +39,7 @@ cargo test
 ```bash
 cargo doc --open
 ```
+
+## Contributor Agreement
+
+By contributing to this repository, you agree that your contributions will be licensed under the [GPLv3 License](https://www.gnu.org/licenses/gpl-3.0.en.html).
