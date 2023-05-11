@@ -1,6 +1,6 @@
-# Dilithium
+# CRYSTALS-Dilithium
 
-Pure RUST implementation of [DILITHIUM-Crystals](https://pq-crystals.org/dilithium/) digital signature scheme in 3 variants:
+Pure RUST implementation of [CRYSTALS-Dilithium](https://pq-crystals.org/dilithium/) digital signature scheme in 3 variants:
 - dilithium2 
 - dilithium3 
 - dilithuim5.
@@ -14,7 +14,7 @@ The implementation was verified in two separate ways:
 
 ---
 > **Use at Your Own Risk**  
-> This implementation of the Dilithium cryptographic algorithm has not yet undergone a formal security audit by a recognized authority. As a result, there may be unknown security vulnerabilities, weaknesses, or potential flaws in the code. Users are advised to exercise caution when implementing or using this code.
+> This implementation of the CRYSTALS-Dilithium cryptographic algorithm has not yet undergone a formal security audit by a recognized authority. As a result, there may be unknown security vulnerabilities, weaknesses, or potential flaws in the code. Users are advised to exercise caution when implementing or using this code.
 ---
 
 ## Build
