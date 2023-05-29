@@ -35,6 +35,12 @@ let is_verified = keypair.public.verify(&msg, &signature);
 ```bash
 cargo test
 ```
+
+## Benchmarks
+```bash
+cargo bench
+```
+
 ## Docs
 ```bash
 cargo doc --open

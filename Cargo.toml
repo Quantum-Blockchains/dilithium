@@ -8,3 +8,10 @@ license = "GPL-3.0"
 
 [dependencies]
 rand = "0.7.3"
+
+[dev-dependencies]
+criterion = { version = "0.4", features = ["html_reports"] }
+
+[[bench]]
+name = "dilithium_benchmarks"
+harness = false
