@@ -37,9 +37,18 @@ cargo test
 ```
 
 ## Benchmarks
+
+Benchmarks are run using [criterion.rs](https://github.com/japaric/criterion.rs):
 ```bash
 cargo bench
 ```
+Running on 2,6 GHz 6-Core Intel Core i7
+
+| Benchmark                       | time      |
+| :---                            |:----------|
+| keypair generation              | 83.548 µs |
+| signing                         | 137.19 µs |
+| signature verification          | 57.331 µs |
 
 ## Docs
 ```bash
