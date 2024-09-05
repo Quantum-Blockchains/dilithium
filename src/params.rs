@@ -9,8 +9,12 @@ pub const SEEDBYTES: usize = 32;
 pub const CRHBYTES: usize = 64;
 pub const POLYT1_PACKEDBYTES: usize = 320;
 pub const POLYT0_PACKEDBYTES: usize = 416;
+pub const TR_BYTES: usize = 64;
 
 // Specific security levels parameters
 pub mod lvl2;
 pub mod lvl3;
 pub mod lvl5;
+pub mod ML_DSA_44;
+pub mod ML_DSA_65;
+pub mod ML_DSA_87;
