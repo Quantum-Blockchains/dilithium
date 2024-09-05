@@ -177,8 +177,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "dilithium"
-version = "0.1.0"
+name = "crystals-dilithium"
+version = "1.0.0"
 dependencies = [
  "criterion",
  "rand",
