@@ -102,10 +102,10 @@ pub fn unpack_sk(
 /// Bit-pack signature sig = (c, z, h).
 pub fn pack_sig(sig: &mut [u8], c: Option<&[u8]>, z: &Polyvecl, h: &Polyveck) {
     if let Some(challenge) = c {
-        sig[..params::SEEDBYTES].copy_from_slice(&challenge[..params::SEEDBYTES]);
+        sig[..params::ml_dsa_87::C_DASH_BYTES].copy_from_slice(&challenge[..params::ml_dsa_87::C_DASH_BYTES]);
     }
 
-    let mut idx = params::SEEDBYTES;
+    let mut idx = params::ml_dsa_87::C_DASH_BYTES;
     for i in 0..L {
         poly::lvl5::z_pack(&mut sig[idx + i * params::ml_dsa_87::POLYZ_PACKEDBYTES..], &z.vec[i]);
     }
@@ -132,9 +132,9 @@ pub fn unpack_sig(
     h: &mut Polyveck,
     sig: &[u8],
 ) -> bool {
-    c[..params::SEEDBYTES].copy_from_slice(&sig[..params::SEEDBYTES]);
+    c[..params::ml_dsa_87::C_DASH_BYTES].copy_from_slice(&sig[..params::ml_dsa_87::C_DASH_BYTES]);
     
-    let mut idx = params::SEEDBYTES;
+    let mut idx = params::ml_dsa_87::C_DASH_BYTES;
     for i in 0..L {
         poly::lvl5::z_unpack(&mut z.vec[i], &sig[idx + i * params::ml_dsa_87::POLYZ_PACKEDBYTES..]);
     }
