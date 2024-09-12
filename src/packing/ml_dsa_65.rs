@@ -1,6 +1,6 @@
-use crate::{params, poly, polyvec::lvl2::{Polyveck, Polyvecl}};
-const K: usize = params::ML_DSA_44::K;
-const L: usize = params::ML_DSA_44::L;
+use crate::{params, poly, polyvec::lvl3::{Polyveck, Polyvecl}};
+const K: usize = params::ml_dsa_65::K;
+const L: usize = params::ml_dsa_65::L;
 const N: usize = params::N as usize;
 
 /// Bit-pack public key pk = (rho, t1).
@@ -51,14 +51,14 @@ pub fn pack_sk(
     idx += params::TR_BYTES;
 
     for i in 0..L {
-        poly::lvl2::eta_pack(&mut sk[idx + i * params::ML_DSA_44::POLYETA_PACKEDBYTES..], &s1.vec[i]);
+        poly::lvl3::eta_pack(&mut sk[idx + i * params::ml_dsa_65::POLYETA_PACKEDBYTES..], &s1.vec[i]);
     }
-    idx += L * params::ML_DSA_44::POLYETA_PACKEDBYTES;
+    idx += L * params::ml_dsa_65::POLYETA_PACKEDBYTES;
 
     for i in 0..K {
-        poly::lvl2::eta_pack(&mut sk[idx + i * params::ML_DSA_44::POLYETA_PACKEDBYTES..], &s2.vec[i]);
+        poly::lvl3::eta_pack(&mut sk[idx + i * params::ml_dsa_65::POLYETA_PACKEDBYTES..], &s2.vec[i]);
     }
-    idx += K * params::ML_DSA_44::POLYETA_PACKEDBYTES;
+    idx += K * params::ml_dsa_65::POLYETA_PACKEDBYTES;
 
     for i in 0..K {
         poly::t0_pack(&mut sk[idx + i * params::POLYT0_PACKEDBYTES..], &t0.vec[i]);
@@ -85,14 +85,14 @@ pub fn unpack_sk(
     idx += params::TR_BYTES;
 
     for i in 0..L {
-        poly::lvl2::eta_unpack(&mut s1.vec[i], &sk[idx + i * params::ML_DSA_44::POLYETA_PACKEDBYTES..]);
+        poly::lvl3::eta_unpack(&mut s1.vec[i], &sk[idx + i * params::ml_dsa_65::POLYETA_PACKEDBYTES..]);
     }
-    idx += L * params::ML_DSA_44::POLYETA_PACKEDBYTES;
+    idx += L * params::ml_dsa_65::POLYETA_PACKEDBYTES;
 
     for i in 0..K {
-        poly::lvl2::eta_unpack(&mut s2.vec[i], &sk[idx + i * params::ML_DSA_44::POLYETA_PACKEDBYTES..]);
+        poly::lvl3::eta_unpack(&mut s2.vec[i], &sk[idx + i * params::ml_dsa_65::POLYETA_PACKEDBYTES..]);
     }
-    idx += K * params::ML_DSA_44::POLYETA_PACKEDBYTES;
+    idx += K * params::ml_dsa_65::POLYETA_PACKEDBYTES;
 
     for i in 0..K {
         poly::t0_unpack(&mut t0.vec[i], &sk[idx + i * params::POLYT0_PACKEDBYTES..]);
@@ -107,11 +107,11 @@ pub fn pack_sig(sig: &mut [u8], c: Option<&[u8]>, z: &Polyvecl, h: &Polyveck) {
 
     let mut idx = params::SEEDBYTES;
     for i in 0..L {
-        poly::lvl2::z_pack(&mut sig[idx + i * params::ML_DSA_44::POLYZ_PACKEDBYTES..], &z.vec[i]);
+        poly::lvl3::z_pack(&mut sig[idx + i * params::ml_dsa_65::POLYZ_PACKEDBYTES..], &z.vec[i]);
     }
 
-    idx += L * params::ML_DSA_44::POLYZ_PACKEDBYTES;
-    sig[idx..idx + params::ML_DSA_44::OMEGA + K].copy_from_slice(&[0u8; params::ML_DSA_44::OMEGA + K]);
+    idx += L * params::ml_dsa_65::POLYZ_PACKEDBYTES;
+    sig[idx..idx + params::ml_dsa_65::OMEGA + K].copy_from_slice(&[0u8; params::ml_dsa_65::OMEGA + K]);
 
     let mut k = 0;
     for i in 0..K {
@@ -121,7 +121,7 @@ pub fn pack_sig(sig: &mut [u8], c: Option<&[u8]>, z: &Polyvecl, h: &Polyveck) {
             k += 1;
         }
         }
-        sig[idx + params::ML_DSA_44::OMEGA + i] = k as u8;
+        sig[idx + params::ml_dsa_65::OMEGA + i] = k as u8;
     }
 }
 
@@ -136,25 +136,25 @@ pub fn unpack_sig(
     
     let mut idx = params::SEEDBYTES;
     for i in 0..L {
-        poly::lvl2::z_unpack(&mut z.vec[i], &sig[idx + i * params::ML_DSA_44::POLYZ_PACKEDBYTES..]);
+        poly::lvl3::z_unpack(&mut z.vec[i], &sig[idx + i * params::ml_dsa_65::POLYZ_PACKEDBYTES..]);
     }
-    idx += L * params::ML_DSA_44::POLYZ_PACKEDBYTES;
+    idx += L * params::ml_dsa_65::POLYZ_PACKEDBYTES;
 
     let mut k: usize = 0;
     for i in 0..K {
-        if sig[idx + params::ML_DSA_44::OMEGA + i] < k as u8 || sig[idx + params::ML_DSA_44::OMEGA + i] > params::ML_DSA_44::OMEGA as u8 {
+        if sig[idx + params::ml_dsa_65::OMEGA + i] < k as u8 || sig[idx + params::ml_dsa_65::OMEGA + i] > params::ml_dsa_65::OMEGA as u8 {
             return false;
         }
-        for j in k..sig[idx + params::ML_DSA_44::OMEGA + i] as usize {
+        for j in k..sig[idx + params::ml_dsa_65::OMEGA + i] as usize {
             if j > k && sig[idx + j as usize] <= sig[idx + j as usize - 1] {
                 return false;
             }
             h.vec[i].coeffs[sig[idx + j] as usize] = 1;
         }
-        k = sig[idx + params::ML_DSA_44::OMEGA + i] as usize;
+        k = sig[idx + params::ml_dsa_65::OMEGA + i] as usize;
     }
 
-    for j in k..params::ML_DSA_44::OMEGA {
+    for j in k..params::ml_dsa_65::OMEGA {
         if sig[idx + j as usize] > 0 {
             return false;
         }

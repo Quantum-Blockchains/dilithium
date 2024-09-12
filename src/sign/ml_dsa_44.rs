@@ -6,8 +6,8 @@ use crate::{
     polyvec,
     polyvec::lvl2::{Polyveck, Polyvecl},
 };
-const K: usize = params::ML_DSA_44::K;
-const L: usize = params::ML_DSA_44::L;
+const K: usize = params::ml_dsa_44::K;
+const L: usize = params::ml_dsa_44::L;
 
 /// Generate random bytes.
 /// 
@@ -70,12 +70,12 @@ pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
     let mut t0 = Polyveck::default();
     polyvec::lvl2::k_power2round(&mut t1, &mut t0);
 
-    packing::ML_DSA_44::pack_pk(pk, &rho, &t1);
+    packing::ml_dsa_44::pack_pk(pk, &rho, &t1);
 
     let mut tr = [0u8; params::TR_BYTES];
-    fips202::shake256(&mut tr, params::TR_BYTES, pk, params::ML_DSA_44::PUBLICKEYBYTES);
+    fips202::shake256(&mut tr, params::TR_BYTES, pk, params::ml_dsa_44::PUBLICKEYBYTES);
 
-    packing::ML_DSA_44::pack_sk(sk, &rho, &tr, &key, &t0, &s1, &s2);
+    packing::ml_dsa_44::pack_sk(sk, &rho, &tr, &key, &t0, &s1, &s2);
 }
 
 /// Compute a signature for a given message from a private (secret) key.
@@ -94,7 +94,7 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
     let mut s1 = Polyvecl::default();
     let mut s2 = Polyveck::default();
 
-    packing::ML_DSA_44::unpack_sk(&mut rho, &mut tr, &mut keymu[..params::SEEDBYTES], &mut t0, &mut s1, &mut s2, &sk);
+    packing::ml_dsa_44::unpack_sk(&mut rho, &mut tr, &mut keymu[..params::SEEDBYTES], &mut t0, &mut s1, &mut s2, &sk);
 
     let mut state = fips202::KeccakState::default();
     fips202::shake256_absorb(&mut state, &tr, params::TR_BYTES);
@@ -137,7 +137,7 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
 
         state.init();
         fips202::shake256_absorb(&mut state, &keymu[params::SEEDBYTES..], params::CRHBYTES);
-        fips202::shake256_absorb(&mut state, &sig, K * params::ML_DSA_44::POLYW1_PACKEDBYTES);
+        fips202::shake256_absorb(&mut state, &sig, K * params::ml_dsa_44::POLYW1_PACKEDBYTES);
         fips202::shake256_finalize(&mut state);
         fips202::shake256_squeeze(sig, params::SEEDBYTES, &mut state);
 
@@ -149,7 +149,7 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
         polyvec::lvl2::l_add(&mut z, &y);
         polyvec::lvl2::l_reduce(&mut z);
 
-        if polyvec::lvl2::l_chknorm(&z, (params::ML_DSA_44::GAMMA1 - params::ML_DSA_44::BETA) as i32) > 0 {
+        if polyvec::lvl2::l_chknorm(&z, (params::ml_dsa_44::GAMMA1 - params::ml_dsa_44::BETA) as i32) > 0 {
             continue;
         }
 
@@ -158,7 +158,7 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
         polyvec::lvl2::k_sub(&mut w0, &h);
         polyvec::lvl2::k_reduce(&mut w0);
 
-        if polyvec::lvl2::k_chknorm(&w0, (params::ML_DSA_44::GAMMA2 - params::ML_DSA_44::BETA) as i32) > 0 {
+        if polyvec::lvl2::k_chknorm(&w0, (params::ml_dsa_44::GAMMA2 - params::ml_dsa_44::BETA) as i32) > 0 {
             continue;
         }
 
@@ -166,7 +166,7 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
         polyvec::lvl2::k_invntt_tomont(&mut h);
         polyvec::lvl2::k_reduce(&mut h);
 
-        if polyvec::lvl2::k_chknorm(&h, params::ML_DSA_44::GAMMA2 as i32) > 0 {
+        if polyvec::lvl2::k_chknorm(&h, params::ml_dsa_44::GAMMA2 as i32) > 0 {
             continue;
         }
 
@@ -174,11 +174,11 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
 
         let n = polyvec::lvl2::k_make_hint(&mut h, &w0, &w1);
 
-        if n > params::ML_DSA_44::OMEGA as i32 {
+        if n > params::ml_dsa_44::OMEGA as i32 {
             continue;
         }
 
-        packing::ML_DSA_44::pack_sig(sig, None, &z, &h);
+        packing::ml_dsa_44::pack_sig(sig, None, &z, &h);
 
         return;
     }
@@ -194,7 +194,7 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
 /// 
 /// Returns 'true' if the verification process was successful, 'false' otherwise
 pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
-    let mut buf = [0u8; K * crate::params::ML_DSA_44::POLYW1_PACKEDBYTES];
+    let mut buf = [0u8; K * crate::params::ml_dsa_44::POLYW1_PACKEDBYTES];
     let mut rho = [0u8; params::SEEDBYTES];
     let mut mu = [0u8; params::CRHBYTES];
     let mut c = [0u8; params::SEEDBYTES];
@@ -208,17 +208,17 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
     );
     let mut state = fips202::KeccakState::default(); // shake256_init()
 
-    if sig.len() != crate::params::ML_DSA_44::SIGNBYTES {
+    if sig.len() != crate::params::ml_dsa_44::SIGNBYTES {
         return false;
     }
 
-    packing::ML_DSA_44::unpack_pk(&mut rho, &mut t1, pk);
-    if !packing::ML_DSA_44::unpack_sig(&mut c, &mut z, &mut h, sig) {
+    packing::ml_dsa_44::unpack_pk(&mut rho, &mut t1, pk);
+    if !packing::ml_dsa_44::unpack_sig(&mut c, &mut z, &mut h, sig) {
         return false;
     }
     if polyvec::lvl2::l_chknorm(
         &z,
-        (crate::params::ML_DSA_44::GAMMA1 - crate::params::ML_DSA_44::BETA) as i32,
+        (crate::params::ml_dsa_44::GAMMA1 - crate::params::ml_dsa_44::BETA) as i32,
     ) > 0
     {
         return false;
@@ -229,7 +229,7 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
         &mut mu,
         params::SEEDBYTES,
         pk,
-        crate::params::ML_DSA_44::PUBLICKEYBYTES,
+        crate::params::ml_dsa_44::PUBLICKEYBYTES,
     );
     fips202::shake256_absorb(&mut state, &mu, params::SEEDBYTES);
     fips202::shake256_absorb(&mut state, m, m.len());
@@ -264,7 +264,7 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
     fips202::shake256_absorb(
         &mut state,
         &buf,
-        K * crate::params::ML_DSA_44::POLYW1_PACKEDBYTES,
+        K * crate::params::ml_dsa_44::POLYW1_PACKEDBYTES,
     );
     fips202::shake256_finalize(&mut state);
     fips202::shake256_squeeze(&mut c2, params::SEEDBYTES, &mut state);
@@ -280,12 +280,12 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
 //    #[test]
 //    fn keypair() {
 //        let seed: [u8; crate::params::SEEDBYTES] = [];
-//        let mut pk = [0u8; crate::params::ML_DSA_44::PUBLICKEYBYTES];
-//        let mut sk = [0u8; crate::params::ML_DSA_44::SECRETKEYBYTES];
+//        let mut pk = [0u8; crate::params::ml_dsa_44::PUBLICKEYBYTES];
+//        let mut sk = [0u8; crate::params::ml_dsa_44::SECRETKEYBYTES];
 //        super::keypair(&mut pk, &mut sk, Some(&seed));
 //
-//        let test_pk: [u8; crate::params::ML_DSA_44::PUBLICKEYBYTES] = [];
-//        let test_sk: [u8; crate::params::ML_DSA_44::SECRETKEYBYTES] = [];
+//        let test_pk: [u8; crate::params::ml_dsa_44::PUBLICKEYBYTES] = [];
+//        let test_sk: [u8; crate::params::ml_dsa_44::SECRETKEYBYTES] = [];
 //        assert_eq!(test_pk, pk);
 //        assert_eq!(test_sk, sk);
 //        assert_eq!(
@@ -297,30 +297,30 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
 //    #[test]
 //    fn signature() {
 //        let msg: [u8; 33] = [];
-//        let sk: [u8; crate::params::ML_DSA_44::SECRETKEYBYTES] = [];
-//        let mut sig = [0u8; crate::params::ML_DSA_44::SIGNBYTES];
+//        let sk: [u8; crate::params::ml_dsa_44::SECRETKEYBYTES] = [];
+//        let mut sig = [0u8; crate::params::ml_dsa_44::SIGNBYTES];
 //        super::signature(&mut sig, &msg, &sk, false);
 //
-//        let test_sig: [u8; crate::params::ML_DSA_44::SIGNBYTES] = [];
+//        let test_sig: [u8; crate::params::ml_dsa_44::SIGNBYTES] = [];
 //        assert!(test_sig == sig);
 //    }
 //
 //    #[test]
 //    fn signature2() {
 //        let msg: [u8; 66] = [];
-//        let sk: [u8; crate::params::ML_DSA_44::SECRETKEYBYTES] = [];
-//        let mut sig = [0u8; crate::params::ML_DSA_44::SIGNBYTES];
+//        let sk: [u8; crate::params::ml_dsa_44::SECRETKEYBYTES] = [];
+//        let mut sig = [0u8; crate::params::ml_dsa_44::SIGNBYTES];
 //        super::signature(&mut sig, &msg, &sk, false);
 //
-//        let test_sig: [u8; crate::params::ML_DSA_44::SIGNBYTES + 66] = [];
-//        assert!(test_sig[..crate::params::ML_DSA_44::SIGNBYTES] == sig);
+//        let test_sig: [u8; crate::params::ml_dsa_44::SIGNBYTES + 66] = [];
+//        assert!(test_sig[..crate::params::ml_dsa_44::SIGNBYTES] == sig);
 //    }
 //
 //    #[test]
 //    fn verify() {
 //        let msg: [u8; 33] = [];
-//        let sig: [u8; crate::params::ML_DSA_44::SIGNBYTES] = [];
-//        let pk: [u8; crate::params::ML_DSA_44::PUBLICKEYBYTES] = []
+//        let sig: [u8; crate::params::ml_dsa_44::SIGNBYTES] = [];
+//        let pk: [u8; crate::params::ml_dsa_44::PUBLICKEYBYTES] = []
 //        assert!(super::verify(&sig, &msg, &pk));
 //    }
 //}
