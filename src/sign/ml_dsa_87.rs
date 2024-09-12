@@ -78,8 +78,8 @@ pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
 /// * 'sig' - preallocated with at least SIGNBYTES buffer
 /// * 'msg' - message to sign
 /// * 'sk' - private key to use
-/// * 'randomized' - indicates wether to randomize the signature or to act deterministicly
-pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
+/// * 'hedged' - indicates wether to randomize the signature or to act deterministicly
+pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], hedged: bool) {
     let mut rho = [0u8; params::SEEDBYTES];
     let mut tr = [0u8; params::TR_BYTES];
     let mut keymu = [0u8; params::SEEDBYTES + params::CRHBYTES];
@@ -95,12 +95,17 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
     fips202::shake256_finalize(&mut state);
     fips202::shake256_squeeze(&mut keymu[params::SEEDBYTES..], params::CRHBYTES, &mut state);
 
-    let mut rhoprime = [0u8; params::CRHBYTES];
-    if randomized {
-        random_bytes(&mut rhoprime, params::CRHBYTES);
-    } else {
-        fips202::shake256(&mut rhoprime, params::CRHBYTES, &keymu, params::SEEDBYTES + params::CRHBYTES);
+    let mut rnd = [0u8; params::SEEDBYTES];
+    if hedged {
+        random_bytes(&mut rnd, params::SEEDBYTES);
     }
+    state = fips202::KeccakState::default();
+    fips202::shake256_absorb(&mut state, &keymu[..params::SEEDBYTES], params::SEEDBYTES);
+    fips202::shake256_absorb(&mut state, &rnd, params::SEEDBYTES);
+    fips202::shake256_absorb(&mut state, &keymu[params::SEEDBYTES..], params::CRHBYTES);
+    fips202::shake256_finalize(&mut state);
+    let mut rhoprime = [0u8; params::CRHBYTES];
+    fips202::shake256_squeeze(&mut rhoprime, params::CRHBYTES, &mut state);
 
     let mut mat = [Polyvecl::default(); K];
     polyvec::lvl5::matrix_expand(&mut mat, &rho);
