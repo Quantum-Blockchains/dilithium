@@ -1,11 +1,6 @@
 use rand::RngCore;
 
-use crate::{
-    fips202, packing, params, poly,
-    poly::Poly,
-    polyvec,
-    polyvec::lvl2::{Polyveck, Polyvecl},
-};
+use crate::{fips202, packing, params, poly, poly::Poly, polyvec, polyvec::lvl2::{Polyveck, Polyvecl}};
 const K: usize = params::ml_dsa_44::K;
 const L: usize = params::ml_dsa_44::L;
 
@@ -106,7 +101,7 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], hedged: bool) {
     if hedged {
         random_bytes(&mut rnd, params::SEEDBYTES);
     }
-    state = fips202::KeccakState::default();
+    state.init();
     fips202::shake256_absorb(&mut state, &keymu[..params::SEEDBYTES], params::SEEDBYTES);
     fips202::shake256_absorb(&mut state, &rnd, params::SEEDBYTES);
     fips202::shake256_absorb(&mut state, &keymu[params::SEEDBYTES..], params::CRHBYTES);
@@ -202,8 +197,8 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
     let mut buf = [0u8; K * crate::params::ml_dsa_44::POLYW1_PACKEDBYTES];
     let mut rho = [0u8; params::SEEDBYTES];
     let mut mu = [0u8; params::CRHBYTES];
-    let mut c = [0u8; params::SEEDBYTES];
-    let mut c2 = [0u8; params::SEEDBYTES];
+    let mut c = [0u8; params::ml_dsa_44::C_DASH_BYTES];
+    let mut c2 = [0u8; params::ml_dsa_44::C_DASH_BYTES];
     let mut cp = Poly::default();
     let (mut mat, mut z) = ([Polyvecl::default(); K], Polyvecl::default());
     let (mut t1, mut w1, mut h) = (
@@ -242,7 +237,7 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
     fips202::shake256_squeeze(&mut mu, params::CRHBYTES, &mut state);
 
     // Matrix-vector multiplication; compute Az - c2^dt1
-    poly::lvl2::challenge(&mut cp, &c);
+    poly::ml_dsa_44::challenge(&mut cp, &c);
     polyvec::lvl2::matrix_expand(&mut mat, &rho);
 
     polyvec::lvl2::l_ntt(&mut z);
@@ -272,7 +267,7 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
         K * crate::params::ml_dsa_44::POLYW1_PACKEDBYTES,
     );
     fips202::shake256_finalize(&mut state);
-    fips202::shake256_squeeze(&mut c2, params::SEEDBYTES, &mut state);
+    fips202::shake256_squeeze(&mut c2, params::ml_dsa_44::C_DASH_BYTES, &mut state);
     // Doesn't require constant time equality check
     if c != c2 {
         return false;
