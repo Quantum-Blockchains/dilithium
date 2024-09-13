@@ -278,6 +278,30 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn self_verify_randomized() {
+        let mut pk = [0u8; crate::params::lvl2::PUBLICKEYBYTES];
+        let mut sk = [0u8; crate::params::lvl2::SECRETKEYBYTES];
+        super::keypair(&mut pk, &mut sk, None);
+        const MSG_BYTES: usize = 94;
+        let mut msg = [0u8; MSG_BYTES];
+        super::random_bytes(&mut msg, MSG_BYTES);
+        let mut sig = [0u8; crate::params::lvl2::SIGNBYTES];
+        super::signature(&mut sig, &msg, &sk, true);
+        assert!(super::verify(&sig, &msg, &pk));
+    }
+    #[test]
+    fn self_verify() {
+        let mut pk = [0u8; crate::params::lvl2::PUBLICKEYBYTES];
+        let mut sk = [0u8; crate::params::lvl2::SECRETKEYBYTES];
+        super::keypair(&mut pk, &mut sk, None);
+        const MSG_BYTES: usize = 94;
+        let mut msg = [0u8; MSG_BYTES];
+        super::random_bytes(&mut msg, MSG_BYTES);
+        let mut sig = [0u8; crate::params::lvl2::SIGNBYTES];
+        super::signature(&mut sig, &msg, &sk, false);
+        assert!(super::verify(&sig, &msg, &pk));
+    }
+    #[test]
     fn keypair() {
         let seed: [u8; crate::params::SEEDBYTES] = [
             0x7C, 0x99, 0x35, 0xA0, 0xB0, 0x76, 0x94, 0xAA, 0x0C, 0x6D, 0x10, 0xE4, 0xDB, 0x6B,

@@ -275,8 +275,32 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
     true
 }
 
-//#[cfg(test)]
-//mod tests {
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn self_verify_hedged() {
+        let mut pk = [0u8; crate::params::ml_dsa_44::PUBLICKEYBYTES];
+        let mut sk = [0u8; crate::params::ml_dsa_44::SECRETKEYBYTES];
+        super::keypair(&mut pk, &mut sk, None);
+        const MSG_BYTES: usize = 94;
+        let mut msg = [0u8; MSG_BYTES];
+        super::random_bytes(&mut msg, MSG_BYTES);
+        let mut sig = [0u8; crate::params::ml_dsa_44::SIGNBYTES];
+        super::signature(&mut sig, &msg, &sk, true);
+        assert!(super::verify(&sig, &msg, &pk));
+    }
+    #[test]
+    fn self_verify() {
+        let mut pk = [0u8; crate::params::ml_dsa_44::PUBLICKEYBYTES];
+        let mut sk = [0u8; crate::params::ml_dsa_44::SECRETKEYBYTES];
+        super::keypair(&mut pk, &mut sk, None);
+        const MSG_BYTES: usize = 94;
+        let mut msg = [0u8; MSG_BYTES];
+        super::random_bytes(&mut msg, MSG_BYTES);
+        let mut sig = [0u8; crate::params::ml_dsa_44::SIGNBYTES];
+        super::signature(&mut sig, &msg, &sk, false);
+        assert!(super::verify(&sig, &msg, &pk));
+    }
 //    #[test]
 //    fn keypair() {
 //        let seed: [u8; crate::params::SEEDBYTES] = [];
@@ -323,4 +347,4 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
 //        let pk: [u8; crate::params::ml_dsa_44::PUBLICKEYBYTES] = []
 //        assert!(super::verify(&sig, &msg, &pk));
 //    }
-//}
+}
