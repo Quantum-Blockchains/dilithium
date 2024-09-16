@@ -1,20 +1,6 @@
-use rand::RngCore;
-
 use crate::{fips202, packing, params, poly, poly::Poly, polyvec, polyvec::lvl2::{Polyveck, Polyvecl}};
 const K: usize = params::ml_dsa_44::K;
 const L: usize = params::ml_dsa_44::L;
-
-/// Generate random bytes.
-/// 
-/// # Arguments
-/// 
-/// * 'bytes' - an array to fill with random data
-/// * 'n' - number of bytes to generate
-fn random_bytes(bytes: &mut [u8], n: usize) {
-    rand::prelude::thread_rng()
-        .try_fill_bytes(&mut bytes[..n])
-        .unwrap();
-}
 
 /// Generate public and private key.
 ///
@@ -24,15 +10,17 @@ fn random_bytes(bytes: &mut [u8], n: usize) {
 /// * 'sk' - preallocated buffer for private key
 /// * 'seed' - optional seed; if None [random_bytes()] is used for randomness generation
 pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
-    let mut init_seed = [0u8; params::SEEDBYTES];
+    let mut init_seed = [0u8; params::SEEDBYTES+2];
     match seed {
-        Some(x) => init_seed.copy_from_slice(x),
-        None => random_bytes(&mut init_seed, params::SEEDBYTES),
+        Some(x) => init_seed[..params::SEEDBYTES].copy_from_slice(x),
+        None => crate::random_bytes(&mut init_seed, params::SEEDBYTES),
     };
+    init_seed[params::SEEDBYTES] = K as u8;
+    init_seed[params::SEEDBYTES+1] = L as u8;
 
     const SEEDBUF_LEN: usize = 2 * params::SEEDBYTES + params::CRHBYTES;
     let mut seedbuf = [0u8; SEEDBUF_LEN];
-    fips202::shake256(&mut seedbuf, SEEDBUF_LEN, &init_seed, params::SEEDBYTES);
+    fips202::shake256(&mut seedbuf, SEEDBUF_LEN, &init_seed, params::SEEDBYTES+2);
 
     let mut rho = [0u8; params::SEEDBYTES];
     rho.copy_from_slice(&seedbuf[..params::SEEDBYTES]);
@@ -99,7 +87,7 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], hedged: bool) {
 
     let mut rnd = [0u8; params::SEEDBYTES];
     if hedged {
-        random_bytes(&mut rnd, params::SEEDBYTES);
+        crate::random_bytes(&mut rnd, params::SEEDBYTES);
     }
     state.init();
     fips202::shake256_absorb(&mut state, &keymu[..params::SEEDBYTES], params::SEEDBYTES);
@@ -284,7 +272,7 @@ mod tests {
         super::keypair(&mut pk, &mut sk, None);
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
-        super::random_bytes(&mut msg, MSG_BYTES);
+        crate::random_bytes(&mut msg, MSG_BYTES);
         let mut sig = [0u8; crate::params::ml_dsa_44::SIGNBYTES];
         super::signature(&mut sig, &msg, &sk, true);
         assert!(super::verify(&sig, &msg, &pk));
@@ -296,7 +284,7 @@ mod tests {
         super::keypair(&mut pk, &mut sk, None);
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
-        super::random_bytes(&mut msg, MSG_BYTES);
+        crate::random_bytes(&mut msg, MSG_BYTES);
         let mut sig = [0u8; crate::params::ml_dsa_44::SIGNBYTES];
         super::signature(&mut sig, &msg, &sk, false);
         assert!(super::verify(&sig, &msg, &pk));
