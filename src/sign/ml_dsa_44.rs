@@ -139,9 +139,9 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], hedged: bool) {
         fips202::shake256_absorb(&mut state, &keymu[params::SEEDBYTES..], params::CRHBYTES);
         fips202::shake256_absorb(&mut state, &sig, K * params::ml_dsa_44::POLYW1_PACKEDBYTES);
         fips202::shake256_finalize(&mut state);
-        fips202::shake256_squeeze(sig, params::SEEDBYTES, &mut state);
+        fips202::shake256_squeeze(sig, params::ml_dsa_44::C_DASH_BYTES, &mut state);
 
-        poly::lvl2::challenge(&mut cp, sig);
+        poly::ml_dsa_44::challenge(&mut cp, sig);
         poly::ntt(&mut cp);
 
         polyvec::lvl2::l_pointwise_poly_montgomery(&mut z, &cp, &s1);
@@ -227,11 +227,11 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
     // Compute CRH(CRH(rho, t1), msg)
     fips202::shake256(
         &mut mu,
-        params::SEEDBYTES,
+        params::CRHBYTES,
         pk,
         crate::params::ml_dsa_44::PUBLICKEYBYTES,
     );
-    fips202::shake256_absorb(&mut state, &mu, params::SEEDBYTES);
+    fips202::shake256_absorb(&mut state, &mu, params::CRHBYTES);
     fips202::shake256_absorb(&mut state, m, m.len());
     fips202::shake256_finalize(&mut state);
     fips202::shake256_squeeze(&mut mu, params::CRHBYTES, &mut state);
