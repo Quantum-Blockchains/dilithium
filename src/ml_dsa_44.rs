@@ -7,11 +7,6 @@ pub const KEYPAIRBYTES: usize = SECRETKEYBYTES + PUBLICKEYBYTES;
 
 pub type Signature = [u8; SIGNBYTES];
 
-pub enum PH {
-    SHA256,
-    SHA512,
-}
-
 /// A pair of private and public keys.
 pub struct Keypair {
     pub secret: SecretKey,
@@ -90,7 +85,7 @@ impl Keypair {
     /// * 'msg' - message to sign
     /// 
     /// Returns Option<Signature>
-    pub fn prehash_sign(&self, msg: &[u8], ctx: Option<&[u8]>, hedged: bool, ph: PH) -> Option<Signature> {
+    pub fn prehash_sign(&self, msg: &[u8], ctx: Option<&[u8]>, hedged: bool, ph:crate::PH) -> Option<Signature> {
         self.secret.prehash_sign(msg, ctx, hedged, ph)
     }
 
@@ -102,7 +97,7 @@ impl Keypair {
     /// * 'sig' - signature to verify
     /// 
     /// Returns 'true' if the verification process was successful, 'false' otherwise
-    pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph: PH) -> bool {
+    pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph:crate::PH) -> bool {
         self.public.prehash_verify(msg, sig, ctx, ph)
     }
 }
@@ -177,15 +172,15 @@ impl SecretKey {
     /// * 'ph' - pre-hash function
     /// 
     /// Returns Option<Signature>
-    pub fn prehash_sign(&self, msg: &[u8], ctx: Option<&[u8]>, hedged: bool, ph: PH) -> Option<Signature>  {
+    pub fn prehash_sign(&self, msg: &[u8], ctx: Option<&[u8]>, hedged: bool, ph:crate::PH) -> Option<Signature>  {
         let mut oid = [0u8; 11];
         let mut phm: Vec<u8> = Vec::new();
         match ph {
-            PH::SHA256 => {
+           crate::PH::SHA256 => {
                 oid.copy_from_slice(&[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01]);
                 phm.extend_from_slice(Sha256::digest(msg).as_slice());
             },
-            PH::SHA512 => {
+           crate::PH::SHA512 => {
                 oid.copy_from_slice(&[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03]);
                 phm.extend_from_slice(Sha512::digest(msg).as_slice());
             },
@@ -289,18 +284,18 @@ impl PublicKey {
     /// * 'ph' - pre-hash function
     /// 
     /// Returns 'true' if the verification process was successful, 'false' otherwise
-    pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph: PH) -> bool {
+    pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph:crate::PH) -> bool {
         if sig.len() != SIGNBYTES {
             return false;
         }
         let mut oid = [0u8; 11];
         let mut phm: Vec<u8> = Vec::new();
         match ph {
-            PH::SHA256 => {
+           crate::PH::SHA256 => {
                 oid.copy_from_slice(&[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01]);
                 phm.extend_from_slice(Sha256::digest(msg).as_slice());
             },
-            PH::SHA512 => {
+           crate::PH::SHA512 => {
                 oid.copy_from_slice(&[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03]);
                 phm.extend_from_slice(Sha512::digest(msg).as_slice());
             },
@@ -359,8 +354,8 @@ mod tests {
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
         let keys = Keypair::generate(None);
-        let sig = keys.prehash_sign(&msg, None, true, super::PH::SHA256);
-        assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, super::PH::SHA256));
+        let sig = keys.prehash_sign(&msg, None, true, crate::PH::SHA256);
+        assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, crate::PH::SHA256));
     }
     #[test]
     fn self_verify_prehash() {
@@ -368,7 +363,7 @@ mod tests {
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
         let keys = Keypair::generate(None);
-        let sig = keys.prehash_sign(&msg, None, false, super::PH::SHA256);
-        assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, super::PH::SHA256));
+        let sig = keys.prehash_sign(&msg, None, false, crate::PH::SHA256);
+        assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, crate::PH::SHA256));
     }
 }

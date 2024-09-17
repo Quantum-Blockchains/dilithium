@@ -14,6 +14,11 @@ pub mod rounding;
 pub mod reduce;
 pub mod sign;
 
+pub enum PH {
+    SHA256,
+    SHA512,
+}
+
 use rand::RngCore;
 /// Generate random bytes.
 /// 
