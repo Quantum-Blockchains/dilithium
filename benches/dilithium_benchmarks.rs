@@ -3,7 +3,7 @@
 use criterion::{Criterion, criterion_group};
 
 mod dilithium_benches {
-    use dilithium::dilithium2::Keypair;
+    use crystals_dilithium::dilithium2::Keypair;
 
     use super::*;
 
