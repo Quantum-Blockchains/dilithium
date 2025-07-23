@@ -20,7 +20,7 @@ pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
 
     const SEEDBUF_LEN: usize = 2 * params::SEEDBYTES + params::CRHBYTES;
     let mut seedbuf = [0u8; SEEDBUF_LEN];
-    fips202::shake256(&mut seedbuf, SEEDBUF_LEN, &init_seed, params::SEEDBYTES);
+    fips202::shake256(&mut seedbuf, SEEDBUF_LEN, &init_seed, params::SEEDBYTES+2);
 
     let mut rho = [0u8; params::SEEDBYTES];
     rho.copy_from_slice(&seedbuf[..params::SEEDBYTES]);
