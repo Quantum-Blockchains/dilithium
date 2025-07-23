@@ -249,7 +249,9 @@ impl PublicKey {
     /// 
     /// Returns 'true' if the verification process was successful, 'false' otherwise
     pub fn verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>) -> bool {
+        println!("verify lib");
         if sig.len() != SIGNBYTES {
+            println!("SIGNBYTES LEN: {:?}", SIGNBYTES);
             return false;
         }
         match ctx {
