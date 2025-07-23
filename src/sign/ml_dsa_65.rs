@@ -10,11 +10,13 @@ const L: usize = params::ml_dsa_65::L;
 /// * 'sk' - preallocated buffer for private key
 /// * 'seed' - optional seed; if None [random_bytes()] is used for randomness generation
 pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
-    let mut init_seed = [0u8; params::SEEDBYTES];
+    let mut init_seed = [0u8; params::SEEDBYTES+2];
     match seed {
-        Some(x) => init_seed.copy_from_slice(x),
-        None => crate::random_bytes(&mut init_seed, params::SEEDBYTES)
+        Some(x) => init_seed[..params::SEEDBYTES].copy_from_slice(x),
+        None => crate::random_bytes(&mut init_seed, params::SEEDBYTES),
     };
+    init_seed[params::SEEDBYTES] = K as u8;
+    init_seed[params::SEEDBYTES+1] = L as u8;
 
     const SEEDBUF_LEN: usize = 2 * params::SEEDBYTES + params::CRHBYTES;
     let mut seedbuf = [0u8; SEEDBUF_LEN];
