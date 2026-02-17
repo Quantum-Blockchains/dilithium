@@ -13,10 +13,17 @@ pub mod polyvec;
 pub mod rounding;
 pub mod reduce;
 pub mod sign;
+pub mod prehash;
 
-pub enum PH {
-    SHA256,
-    SHA512,
+
+pub enum RandomMode {
+    /// Deterministyczny podpis (ACVP: deterministic=true)
+    Deterministic,
+    /// Hedged – implementacja sama pobiera entropię (np. z RNG)
+    Hedged,
+    /// Z góry podany strumień bajtów RNG (ACVP: pole `rnd`)
+    #[cfg(feature = "acvp-internal")]
+    Fixed(Vec<u8>),
 }
 
 use rand::RngCore;
@@ -30,6 +37,24 @@ fn random_bytes(bytes: &mut [u8], n: usize) {
     rand::prelude::thread_rng()
         .try_fill_bytes(&mut bytes[..n])
         .unwrap();
+}
+
+fn build_mprime(msg: &[u8], ctx: Option<&[u8]>, ph: bool) -> Option<Vec<u8>> {
+    let ctx = ctx.unwrap_or(&[]);
+    if ctx.len() > 255 {
+        return None;
+    }
+    let ctx_len = u8::try_from(ctx.len()).unwrap();
+    let mut m = Vec::with_capacity(2 + ctx.len() + msg.len());
+    if ph {
+        m.push(0x01);
+    } else {
+        m.push(0x00);
+    }
+    m.push(ctx_len);
+    m.extend_from_slice(ctx);
+    m.extend_from_slice(msg);
+    Some(m)
 }
 
 #[cfg(test)]

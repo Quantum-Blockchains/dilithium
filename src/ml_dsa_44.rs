@@ -1,4 +1,8 @@
 use sha2::{Sha256, Sha512, Digest};
+use crate::prehash::{PH, prehash_bytes};
+
+#[cfg(feature = "acvp-internal")]
+use crate::RandomMode;
 
 pub const SECRETKEYBYTES: usize = crate::params::ml_dsa_44::SECRETKEYBYTES;
 pub const PUBLICKEYBYTES: usize = crate::params::ml_dsa_44::PUBLICKEYBYTES;
@@ -62,8 +66,8 @@ impl Keypair {
     /// * 'msg' - message to sign
     /// 
     /// Returns Option<Signature>
-    pub fn sign(&self, msg: &[u8], ctx: Option<&[u8]>, hedged: bool) -> Option<Signature> {
-        self.secret.sign(msg, ctx, hedged)
+    pub fn sign(&self, msg: &[u8], ctx: Option<&[u8]>, rand: crate::RandomMode) -> Option<Signature> {
+        self.secret.sign(msg, ctx, rand)
     }
 
     /// Verify a signature for a given message with a public key.
@@ -85,8 +89,8 @@ impl Keypair {
     /// * 'msg' - message to sign
     /// 
     /// Returns Option<Signature>
-    pub fn prehash_sign(&self, msg: &[u8], ctx: Option<&[u8]>, hedged: bool, ph:crate::PH) -> Option<Signature> {
-        self.secret.prehash_sign(msg, ctx, hedged, ph)
+    pub fn prehash_sign(&self, msg: &[u8], ctx: Option<&[u8]>, rand: crate::RandomMode, ph: PH) -> Option<Signature> {
+        self.secret.prehash_sign(msg, ctx, rand, ph)
     }
 
     /// Verify a signature for a given message with a public key.
@@ -97,7 +101,7 @@ impl Keypair {
     /// * 'sig' - signature to verify
     /// 
     /// Returns 'true' if the verification process was successful, 'false' otherwise
-    pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph:crate::PH) -> bool {
+    pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph: PH) -> bool {
         self.public.prehash_verify(msg, sig, ctx, ph)
     }
 }
@@ -135,31 +139,14 @@ impl SecretKey {
     /// * 'hedged' - wether to use RNG or not
     /// 
     /// Returns Option<Signature>
-    pub fn sign(&self, msg: &[u8], ctx: Option<&[u8]>, hedged: bool) -> Option<Signature> {
-        match ctx {
-            Some(x) => {
-                if x.len() > 255 {
-                    return None;
-                }
-                let x_len = x.len();
-                let msg_len = msg.len();
-                let mut m = vec![0; msg_len + 2 + x_len];
-                m[1] = x_len as u8;
-                m[2..2+x_len].copy_from_slice(x);
-                m[2+x_len..].copy_from_slice(msg);
-                let mut sig: Signature = [0u8; SIGNBYTES];
-                crate::sign::ml_dsa_44::signature(&mut sig, m.as_slice(), &self.bytes, hedged);
-                Some(sig)
-            },
-            None => {
-                let msg_len = msg.len();
-                let mut m = vec![0; msg_len + 2];
-                m[2..].copy_from_slice(msg);
-                let mut sig: Signature = [0u8; SIGNBYTES];
-                crate::sign::ml_dsa_44::signature(&mut sig, m.as_slice(), &self.bytes, hedged);
-                Some(sig)
-            }
+    pub fn sign(&self, msg: &[u8], ctx: Option<&[u8]>, rand: crate::RandomMode) -> Option<Signature> {
+        let m = crate::build_mprime(msg, ctx, false);
+        if m.is_none() {
+            return None;
         }
+        let mut sig: Signature = [0u8; SIGNBYTES];
+        crate::sign::ml_dsa_44::signature(&mut sig, m.unwrap().as_slice(), &self.bytes, rand);
+        Some(sig)
     }
     
     /// Compute a signature for a given message.
@@ -172,47 +159,29 @@ impl SecretKey {
     /// * 'ph' - pre-hash function
     /// 
     /// Returns Option<Signature>
-    pub fn prehash_sign(&self, msg: &[u8], ctx: Option<&[u8]>, hedged: bool, ph:crate::PH) -> Option<Signature>  {
-        let mut oid = [0u8; 11];
-        let mut phm: Vec<u8> = Vec::new();
-        match ph {
-           crate::PH::SHA256 => {
-                oid.copy_from_slice(&[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01]);
-                phm.extend_from_slice(Sha256::digest(msg).as_slice());
-            },
-           crate::PH::SHA512 => {
-                oid.copy_from_slice(&[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03]);
-                phm.extend_from_slice(Sha512::digest(msg).as_slice());
-            },
+    pub fn prehash_sign(&self, msg: &[u8], ctx: Option<&[u8]>, rand: crate::RandomMode, ph: PH) -> Option<Signature>  {
+        let phm = prehash_bytes(ph, msg);
+        let m = crate::build_mprime(phm.as_slice(), ctx, true);
+        if m.is_none() {
+            return None;
         }
-        match ctx {
-            Some(x) => {
-                if x.len() > 255 {
-                    return None;
-                }
-                let x_len = x.len();
-                let phm_len = phm.len();
-                let mut m = vec![0; 2 + x_len + 11 + phm_len];
-                m[0] = 1;
-                m[1] = x_len as u8;
-                m[2..2+x_len].copy_from_slice(x);
-                m[2+x_len..2+x_len+11].copy_from_slice(&oid);
-                m[2+x_len+11..].copy_from_slice(phm.as_slice());
-                let mut sig: Signature = [0u8; SIGNBYTES];
-                crate::sign::ml_dsa_44::signature(&mut sig, m.as_slice(), &self.bytes, hedged);
-                Some(sig)
-            },
-            None => {
-                let phm_len = phm.len();
-                let mut m = vec![0; 2 + 11 + phm_len];
-                m[0] = 1;
-                m[2..2+11].copy_from_slice(&oid);
-                m[2+11..].copy_from_slice(phm.as_slice());
-                let mut sig: Signature = [0u8; SIGNBYTES];
-                crate::sign::ml_dsa_44::signature(&mut sig, m.as_slice(), &self.bytes, hedged);
-                Some(sig)
-            }
-        }
+        let mut sig: Signature = [0u8; SIGNBYTES];
+        crate::sign::ml_dsa_44::signature(&mut sig, m.unwrap().as_slice(), &self.bytes, rand);
+        Some(sig)
+    }
+
+    #[cfg(feature = "acvp-internal")]
+    pub fn sign_internal(&self, msg: &[u8], rand: crate::RandomMode) -> Option<Signature> {
+        let mut sig: Signature = [0u8; SIGNBYTES];
+        crate::sign::ml_dsa_44::signature(&mut sig, msg, &self.bytes, rand);
+        Some(sig)
+    }
+
+    #[cfg(feature = "acvp-internal")]
+    pub fn sign_mu(&self, mu: &[u8], rand: crate::RandomMode) -> Option<Signature> {
+        let mut sig: Signature = [0u8; SIGNBYTES];
+        crate::sign::ml_dsa_44::signature_mu(&mut sig, mu, &self.bytes, rand);
+        Some(sig)
     }
 }
 
@@ -252,26 +221,11 @@ impl PublicKey {
         if sig.len() != SIGNBYTES {
             return false;
         }
-        match ctx {
-            Some(x) => {
-                if x.len() > 255 {
-                    return false;
-                }
-                let x_len = x.len();
-                let msg_len = msg.len();
-                let mut m = vec![0; msg_len + 2 + x_len];
-                m[1] = x_len as u8;
-                m[2..2+x_len].copy_from_slice(x);
-                m[2+x_len..].copy_from_slice(msg);
-                crate::sign::ml_dsa_44::verify(sig, m.as_slice(), &self.bytes)
-            },
-            None => {
-                let msg_len = msg.len();
-                let mut m = vec![0; msg_len + 2];
-                m[2..].copy_from_slice(msg);
-                crate::sign::ml_dsa_44::verify(sig, m.as_slice(), &self.bytes)
-            }
+        let m = crate::build_mprime(msg, ctx, false);
+        if m.is_none() {
+            return false;
         }
+        crate::sign::ml_dsa_44::verify(sig, m.unwrap().as_slice(), &self.bytes)
     }
 
     /// Verify a signature for a given message with a public key.
@@ -284,59 +238,41 @@ impl PublicKey {
     /// * 'ph' - pre-hash function
     /// 
     /// Returns 'true' if the verification process was successful, 'false' otherwise
-    pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph:crate::PH) -> bool {
+    pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph: PH) -> bool {
         if sig.len() != SIGNBYTES {
             return false;
         }
-        let mut oid = [0u8; 11];
-        let mut phm: Vec<u8> = Vec::new();
-        match ph {
-           crate::PH::SHA256 => {
-                oid.copy_from_slice(&[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01]);
-                phm.extend_from_slice(Sha256::digest(msg).as_slice());
-            },
-           crate::PH::SHA512 => {
-                oid.copy_from_slice(&[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03]);
-                phm.extend_from_slice(Sha512::digest(msg).as_slice());
-            },
+        let phm = prehash_bytes(ph, msg);
+        let m = crate::build_mprime(&phm, ctx, true);
+        if m.is_none() {
+            return false;
         }
-        match ctx {
-            Some(x) => {
-                if x.len() > 255 {
-                    return false;
-                }
-                let x_len = x.len();
-                let phm_len = phm.len();
-                let mut m = vec![0; 2 + x_len + 11 + phm_len];
-                m[0] = 1;
-                m[1] = x_len as u8;
-                m[2..2+x_len].copy_from_slice(x);
-                m[2+x_len..2+x_len+11].copy_from_slice(&oid);
-                m[2+x_len+11..].copy_from_slice(phm.as_slice());
-                crate::sign::ml_dsa_44::verify(sig, m.as_slice(), &self.bytes)
-            },
-            None => {
-                let phm_len = phm.len();
-                let mut m = vec![0; 2 + 11 + phm_len];
-                m[0] = 1;
-                m[2..2+11].copy_from_slice(&oid);
-                m[2+11..].copy_from_slice(phm.as_slice());
-                crate::sign::ml_dsa_44::verify(sig, m.as_slice(), &self.bytes)
-            }
-        }
+        crate::sign::ml_dsa_44::verify(sig, m.unwrap().as_slice(), &self.bytes)
+    }
+
+    #[cfg(feature = "acvp-internal")]
+    pub fn verify_internal(&self, msg: &[u8], sig: &[u8]) -> bool {
+        crate::sign::ml_dsa_44::verify(sig, msg, &self.bytes)
+    }
+
+    #[cfg(feature = "acvp-internal")]
+    pub fn verify_mu(&self, mu: &[u8], sig: &[u8]) -> bool {
+        crate::sign::ml_dsa_44::verify_mu(sig, mu, &self.bytes)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Keypair;
+    use crate::prehash::PH;
+
     #[test]
     fn self_verify_hedged() {
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
         let keys = Keypair::generate(None);
-        let sig = keys.sign(&msg, None, true);
+        let sig = keys.sign(&msg, None, crate::RandomMode::Hedged);
         assert!(keys.verify(&msg, &sig.unwrap(), None));
     }
     #[test]
@@ -345,7 +281,7 @@ mod tests {
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
         let keys = Keypair::generate(None);
-        let sig = keys.sign(&msg, None, false);
+        let sig = keys.sign(&msg, None, crate::RandomMode::Deterministic);
         assert!(keys.verify(&msg, &sig.unwrap(), None));
     }
     #[test]
@@ -354,8 +290,8 @@ mod tests {
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
         let keys = Keypair::generate(None);
-        let sig = keys.prehash_sign(&msg, None, true, crate::PH::SHA256);
-        assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, crate::PH::SHA256));
+        let sig = keys.prehash_sign(&msg, None, crate::RandomMode::Hedged, PH::SHA256);
+        assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, PH::SHA256));
     }
     #[test]
     fn self_verify_prehash() {
@@ -363,7 +299,7 @@ mod tests {
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
         let keys = Keypair::generate(None);
-        let sig = keys.prehash_sign(&msg, None, false, crate::PH::SHA256);
-        assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, crate::PH::SHA256));
+        let sig = keys.prehash_sign(&msg, None, crate::RandomMode::Deterministic, PH::SHA256);
+        assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, PH::SHA256));
     }
 }

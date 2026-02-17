@@ -12,13 +12,32 @@ categories = ["cryptography", "post-quantum-cryptography"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+acvp-internal = []
+
 [dependencies]
 rand = "0.7.3"
 sha2 = "0.10.8"
+sha3 = "0.10.8"
 
 [dev-dependencies]
-criterion = { version = "0.4", features = ["html_reports"] }
+criterion = { version = "0.4", features = ["html_reports"] }   # bo używasz tylko w testach
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = { version = "0.4", features = ["serde"] }
+once_cell = "1"
+getrandom = { version = "0.2", features = ["custom"] }
 
 [[bench]]
 name = "dilithium_benchmarks"
 harness = false
+
+[[bench]]
+name = "mldsa_benchmarks"
+harness = false
+
+[[test]]
+name = "acvp_internal"
+path = "tests/acvp_vectors.rs"
+required-features = ["acvp-internal"]

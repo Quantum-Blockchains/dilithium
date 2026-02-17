@@ -1,3 +1,5 @@
+#[cfg(feature = "acvp-internal")]
+use crate::RandomMode;
 use crate::{fips202, packing, params, poly, poly::Poly, polyvec, polyvec::lvl2::{Polyveck, Polyvecl}};
 const K: usize = params::ml_dsa_44::K;
 const L: usize = params::ml_dsa_44::L;
@@ -69,7 +71,7 @@ pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
 /// * 'msg' - message to sign
 /// * 'sk' - private key to use
 /// * 'hedged' - indicates wether to randomize the signature or to act deterministicly
-pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], hedged: bool) {
+pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], rnd: crate::RandomMode) {
     let mut rho = [0u8; params::SEEDBYTES];
     let mut tr = [0u8; params::TR_BYTES];
     let mut keymu = [0u8; params::SEEDBYTES + params::CRHBYTES];
@@ -85,10 +87,49 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], hedged: bool) {
     fips202::shake256_finalize(&mut state);
     fips202::shake256_squeeze(&mut keymu[params::SEEDBYTES..], params::CRHBYTES, &mut state);
 
-    let mut rnd = [0u8; params::SEEDBYTES];
-    if hedged {
-        crate::random_bytes(&mut rnd, params::SEEDBYTES);
-    }
+    signature_core(sig, &keymu, &rho, &mut t0, &mut s1, &mut s2, rnd);
+}
+
+pub fn signature_mu(sig: &mut [u8], mu: &[u8], sk: &[u8], rnd: crate::RandomMode) {
+    let mut rho = [0u8; params::SEEDBYTES];
+    let mut tr = [0u8; params::TR_BYTES];
+    let mut keymu = [0u8; params::SEEDBYTES + params::CRHBYTES];
+    let mut t0 = Polyveck::default();
+    let mut s1 = Polyvecl::default();
+    let mut s2 = Polyveck::default();
+
+    packing::ml_dsa_44::unpack_sk(&mut rho, &mut tr, &mut keymu[..params::SEEDBYTES], &mut t0, &mut s1, &mut s2, &sk);
+
+    // In the pre-hash interface, 'mu' is provided by the caller and must be CRHBYTES long
+    assert_eq!(mu.len(), params::CRHBYTES);
+    keymu[params::SEEDBYTES..].copy_from_slice(mu);
+
+    signature_core(sig, &keymu, &rho, &mut t0, &mut s1, &mut s2, rnd);
+}
+
+fn signature_core(
+    sig: &mut [u8],
+    keymu: &[u8; params::SEEDBYTES + params::CRHBYTES],
+    rho: &[u8; params::SEEDBYTES],
+    t0: &mut Polyveck,
+    s1: &mut Polyvecl,
+    s2: &mut Polyveck,
+    randomness: crate::RandomMode,
+) {
+
+    let mut rnd = [0u8; params::SEEDBYTES]; 
+    match randomness {
+        crate::RandomMode::Deterministic => {},
+        crate::RandomMode::Hedged => {
+            crate::random_bytes(&mut rnd, params::SEEDBYTES)
+        },
+        #[cfg(feature = "acvp-internal")]
+        crate::RandomMode::Fixed(r) => {
+            rnd.copy_from_slice(r.as_slice());
+        },
+    };
+
+    let mut state = fips202::KeccakState::default();
     state.init();
     fips202::shake256_absorb(&mut state, &keymu[..params::SEEDBYTES], params::SEEDBYTES);
     fips202::shake256_absorb(&mut state, &rnd, params::SEEDBYTES);
@@ -98,10 +139,10 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], hedged: bool) {
     fips202::shake256_squeeze(&mut rhoprime, params::CRHBYTES, &mut state);
 
     let mut mat = [Polyvecl::default(); K];
-    polyvec::lvl2::matrix_expand(&mut mat, &rho);
-    polyvec::lvl2::l_ntt(&mut s1);
-    polyvec::lvl2::k_ntt(&mut s2);
-    polyvec::lvl2::k_ntt(&mut t0);
+    polyvec::lvl2::matrix_expand(&mut mat, rho);
+    polyvec::lvl2::l_ntt(s1);
+    polyvec::lvl2::k_ntt(s2);
+    polyvec::lvl2::k_ntt(t0);
 
     let mut nonce: u16 = 0;
     let mut y = Polyvecl::default();
@@ -132,7 +173,7 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], hedged: bool) {
         poly::ml_dsa_44::challenge(&mut cp, sig);
         poly::ntt(&mut cp);
 
-        polyvec::lvl2::l_pointwise_poly_montgomery(&mut z, &cp, &s1);
+        polyvec::lvl2::l_pointwise_poly_montgomery(&mut z, &cp, s1);
         polyvec::lvl2::l_invntt_tomont(&mut z);
         polyvec::lvl2::l_add(&mut z, &y);
         polyvec::lvl2::l_reduce(&mut z);
@@ -141,7 +182,7 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], hedged: bool) {
             continue;
         }
 
-        polyvec::lvl2::k_pointwise_poly_montgomery(&mut h, &cp, &s2);
+        polyvec::lvl2::k_pointwise_poly_montgomery(&mut h, &cp, s2);
         polyvec::lvl2::k_invntt_tomont(&mut h);
         polyvec::lvl2::k_sub(&mut w0, &h);
         polyvec::lvl2::k_reduce(&mut w0);
@@ -150,7 +191,7 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], hedged: bool) {
             continue;
         }
 
-        polyvec::lvl2::k_pointwise_poly_montgomery(&mut h, &cp, &t0);
+        polyvec::lvl2::k_pointwise_poly_montgomery(&mut h, &cp, t0);
         polyvec::lvl2::k_invntt_tomont(&mut h);
         polyvec::lvl2::k_reduce(&mut h);
 
@@ -172,19 +213,31 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], hedged: bool) {
     }
 }
 
-/// Verify a signature for a given message with a public key.
-/// 
-/// # Arguments
-/// 
-/// * 'sig' - signature to verify
-/// * 'm' - message that is claimed to be signed
-/// * 'pk' - public key
-/// 
-/// Returns 'true' if the verification process was successful, 'false' otherwise
 pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
+    if sig.len() != crate::params::ml_dsa_44::SIGNBYTES {
+        return false;
+    }
+    let mut mu = [0u8; params::CRHBYTES];
+    let mut state = fips202::KeccakState::default();
+    // mu = CRH(pk)
+    fips202::shake256(
+        &mut mu,
+        params::CRHBYTES,
+        pk,
+        crate::params::ml_dsa_44::PUBLICKEYBYTES,
+    );
+    // mu = CRH(mu || m)
+    fips202::shake256_absorb(&mut state, &mu, params::CRHBYTES);
+    fips202::shake256_absorb(&mut state, m, m.len());
+    fips202::shake256_finalize(&mut state);
+    fips202::shake256_squeeze(&mut mu, params::CRHBYTES, &mut state);
+
+    verify_mu(sig, &mu, pk)
+}
+
+pub fn verify_mu(sig: &[u8], mu: &[u8], pk: &[u8]) -> bool {
     let mut buf = [0u8; K * crate::params::ml_dsa_44::POLYW1_PACKEDBYTES];
     let mut rho = [0u8; params::SEEDBYTES];
-    let mut mu = [0u8; params::CRHBYTES];
     let mut c = [0u8; params::ml_dsa_44::C_DASH_BYTES];
     let mut c2 = [0u8; params::ml_dsa_44::C_DASH_BYTES];
     let mut cp = Poly::default();
@@ -194,9 +247,12 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
         Polyveck::default(),
         Polyveck::default(),
     );
-    let mut state = fips202::KeccakState::default(); // shake256_init()
+    let mut state = fips202::KeccakState::default();
 
     if sig.len() != crate::params::ml_dsa_44::SIGNBYTES {
+        return false;
+    }
+    if mu.len() != params::CRHBYTES {
         return false;
     }
 
@@ -211,18 +267,6 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
     {
         return false;
     }
-
-    // Compute CRH(CRH(rho, t1), msg)
-    fips202::shake256(
-        &mut mu,
-        params::CRHBYTES,
-        pk,
-        crate::params::ml_dsa_44::PUBLICKEYBYTES,
-    );
-    fips202::shake256_absorb(&mut state, &mu, params::CRHBYTES);
-    fips202::shake256_absorb(&mut state, m, m.len());
-    fips202::shake256_finalize(&mut state);
-    fips202::shake256_squeeze(&mut mu, params::CRHBYTES, &mut state);
 
     // Matrix-vector multiplication; compute Az - c2^dt1
     poly::ml_dsa_44::challenge(&mut cp, &c);
@@ -246,9 +290,9 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
     polyvec::lvl2::k_use_hint(&mut w1, &h);
     polyvec::lvl2::k_pack_w1(&mut buf, &w1);
 
-    // Call random oracle and verify challenge
+    // Call random oracle and verify challenge using provided mu
     state.init();
-    fips202::shake256_absorb(&mut state, &mu, params::CRHBYTES);
+    fips202::shake256_absorb(&mut state, mu, params::CRHBYTES);
     fips202::shake256_absorb(
         &mut state,
         &buf,
@@ -256,7 +300,7 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
     );
     fips202::shake256_finalize(&mut state);
     fips202::shake256_squeeze(&mut c2, params::ml_dsa_44::C_DASH_BYTES, &mut state);
-    // Doesn't require constant time equality check
+
     if c != c2 {
         return false;
     }
@@ -274,7 +318,7 @@ mod tests {
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
         let mut sig = [0u8; crate::params::ml_dsa_44::SIGNBYTES];
-        super::signature(&mut sig, &msg, &sk, true);
+        super::signature(&mut sig, &msg, &sk, crate::RandomMode::Hedged);
         assert!(super::verify(&sig, &msg, &pk));
     }
     #[test]
@@ -286,7 +330,7 @@ mod tests {
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
         let mut sig = [0u8; crate::params::ml_dsa_44::SIGNBYTES];
-        super::signature(&mut sig, &msg, &sk, false);
+        super::signature(&mut sig, &msg, &sk, crate::RandomMode::Deterministic);
         assert!(super::verify(&sig, &msg, &pk));
     }
 //    #[test]
