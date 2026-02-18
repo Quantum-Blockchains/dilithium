@@ -15,5 +15,6 @@ pub const POLYW1_PACKEDBYTES: usize = 192;
 pub const POLYETA_PACKEDBYTES: usize = 96;
 pub const POLYVECH_PACKEDBYTES: usize = OMEGA + K;
 pub const PUBLICKEYBYTES: usize = super::SEEDBYTES + K * super::POLYT1_PACKEDBYTES;
-pub const SECRETKEYBYTES: usize = 3 * super::SEEDBYTES + (K + L) * POLYETA_PACKEDBYTES + K * super::POLYT0_PACKEDBYTES;
+pub const SECRETKEYBYTES: usize =
+    3 * super::SEEDBYTES + (K + L) * POLYETA_PACKEDBYTES + K * super::POLYT0_PACKEDBYTES;
 pub const SIGNBYTES: usize = super::SEEDBYTES + L * POLYZ_PACKEDBYTES + POLYVECH_PACKEDBYTES;

@@ -2,7 +2,8 @@ use super::{Poly, N};
 use crate::{fips202, params, rounding};
 
 const UNIFORM_ETA_NBLOCKS: usize = (135 + fips202::SHAKE256_RATE) / fips202::SHAKE256_RATE;
-const UNIFORM_GAMMA1_NBLOCKS: usize = (params::lvl2::POLYZ_PACKEDBYTES + fips202::SHAKE256_RATE - 1) / fips202::SHAKE256_RATE;
+const UNIFORM_GAMMA1_NBLOCKS: usize =
+    (params::lvl2::POLYZ_PACKEDBYTES + fips202::SHAKE256_RATE - 1) / fips202::SHAKE256_RATE;
 
 /// For all coefficients c of the input polynomial, compute high and low bits c0, c1 such c mod Q = c1*ALPHA + c0 with -ALPHA/2 < c0 <= ALPHA/2 except c1 = (Q-1)/ALPHA where we set c1 = 0 and -ALPHA/2 <= c0 = c mod Q - Q < 0.
 /// Assumes coefficients to be standard representatives.
@@ -98,7 +99,12 @@ pub fn uniform_eta(a: &mut Poly, seed: &[u8], nonce: u16) {
     let mut ctr = rej_eta(&mut a.coeffs, N, &buf, buflen);
     while ctr < N as u32 {
         fips202::shake256_squeezeblocks(&mut buf, 1, &mut state);
-        ctr += rej_eta(&mut a.coeffs[ctr as usize..], N - ctr as usize, &buf, fips202::SHAKE256_RATE);
+        ctr += rej_eta(
+            &mut a.coeffs[ctr as usize..],
+            N - ctr as usize,
+            &buf,
+            fips202::SHAKE256_RATE,
+        );
     }
 }
 
@@ -188,7 +194,6 @@ pub fn eta_unpack(r: &mut Poly, a: &[u8]) {
         r.coeffs[8 * i + 7] = params::lvl2::ETA as i32 - r.coeffs[8 * i + 7];
     }
 }
-
 
 /// Bit-pack polynomial z with coefficients in [-(GAMMA1 - 1), GAMMA1 - 1].
 /// Input coefficients are assumed to be standard representatives.*

@@ -7,26 +7,26 @@ const K: usize = params::lvl3::K;
 
 #[derive(Clone, Copy)]
 pub struct Polyveck {
-    pub vec: [Poly; K]
+    pub vec: [Poly; K],
 }
 
 impl Default for Polyveck {
     fn default() -> Self {
         Polyveck {
-            vec: [Poly::default(); K]
+            vec: [Poly::default(); K],
         }
     }
 }
 
 #[derive(Clone, Copy)]
 pub struct Polyvecl {
-    pub vec: [Poly; L]
+    pub vec: [Poly; L],
 }
 
 impl Default for Polyvecl {
     fn default() -> Self {
         Polyvecl {
-            vec: [Poly::default(); L]
+            vec: [Poly::default(); L],
         }
     }
 }
@@ -104,9 +104,9 @@ pub fn l_pointwise_poly_montgomery(r: &mut Polyvecl, a: &Poly, v: &Polyvecl) {
 
 pub fn l_chknorm(v: &Polyvecl, bound: i32) -> u8 {
     for i in 0..L {
-       if poly::chknorm(&v.vec[i], bound) > 0 {
-        return 1;
-       } 
+        if poly::chknorm(&v.vec[i], bound) > 0 {
+            return 1;
+        }
     }
     0
 }
@@ -122,29 +122,26 @@ pub fn k_uniform_eta(v: &mut Polyveck, seed: &[u8], mut nonce: u16) {
 
 /// Reduce coefficients of polynomials in vector of length K
 /// to representatives in \[0,2*Q\].
-pub fn k_reduce(v: &mut Polyveck)
-{
-  for i in 0..K {
-    poly::reduce(&mut v.vec[i]);
-  }
+pub fn k_reduce(v: &mut Polyveck) {
+    for i in 0..K {
+        poly::reduce(&mut v.vec[i]);
+    }
 }
 
 /// For all coefficients of polynomials in vector of length K
 /// add Q if coefficient is negative.
-pub fn k_caddq(v: &mut Polyveck)
-{
-  for i in 0..K {
-    poly::caddq(&mut v.vec[i]);
-  }
+pub fn k_caddq(v: &mut Polyveck) {
+    for i in 0..K {
+        poly::caddq(&mut v.vec[i]);
+    }
 }
 
 /// Add vectors of polynomials of length K.
 /// No modular reduction is performed.
-pub fn k_add(w: &mut Polyveck, v: &Polyveck)
-{
-  for i in 0..K {
-    poly::add_ip(&mut w.vec[i], &v.vec[i]);
-  }
+pub fn k_add(w: &mut Polyveck, v: &Polyveck) {
+    for i in 0..K {
+        poly::add_ip(&mut w.vec[i], &v.vec[i]);
+    }
 }
 
 /// Subtract vectors of polynomials of length K.

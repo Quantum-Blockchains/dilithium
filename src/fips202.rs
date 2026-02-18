@@ -28,12 +28,12 @@ impl KeccakState {
 }
 
 /// No rolling defined in the language so got to do it ourselfs :(
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * 'a' - number to rotate right
 /// * 'offset' - how many places to rotate
-/// 
+///
 /// Returns the rotated number
 fn rol(a: u64, offset: u64) -> u64 {
     (a << offset) ^ (a >> (64 - offset))

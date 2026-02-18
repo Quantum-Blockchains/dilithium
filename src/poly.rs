@@ -6,15 +6,13 @@ const D_SHL: i32 = 1 << (params::D - 1);
 /// Represents a polynomial
 #[derive(Clone, Copy)]
 pub struct Poly {
-    pub coeffs: [i32; N]
+    pub coeffs: [i32; N],
 }
 
 /// For some reason can't simply derive the Default trait
 impl Default for Poly {
     fn default() -> Self {
-        Poly {
-            coeffs: [0i32; N]
-        }
+        Poly { coeffs: [0i32; N] }
     }
 }
 
@@ -43,12 +41,12 @@ pub fn caddq(a: &mut Poly) {
 }
 
 /// Add polynomials. No modular reduction is performed.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * 'a' - 1st input polynomial
 /// * 'b' - 2nd input polynomial
-/// 
+///
 /// Returns coefficient wise a + b
 pub fn add(a: &Poly, b: &Poly) -> Poly {
     let mut c = Poly::default();
@@ -59,9 +57,9 @@ pub fn add(a: &Poly, b: &Poly) -> Poly {
 }
 
 /// Add polynomials in place. No modular reduction is performed.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * 'a' - polynomial to add to
 /// * 'b' - added polynomial
 pub fn add_ip(a: &mut Poly, b: &Poly) {
@@ -71,12 +69,12 @@ pub fn add_ip(a: &mut Poly, b: &Poly) {
 }
 
 /// Subtract polynomials. No modular reduction is performed.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * 'a' - 1st input polynomial
 /// * 'b' - 2nd input polynomial
-/// 
+///
 /// Returns coefficient wise a - b
 pub fn sub(a: &Poly, b: &Poly) -> Poly {
     let mut c = Poly::default();
@@ -87,9 +85,9 @@ pub fn sub(a: &Poly, b: &Poly) -> Poly {
 }
 
 /// Subtract polynomials in place. No modular reduction is performed.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * 'a' - polynomial to subtract from
 /// * 'b' - subtracted polynomial
 pub fn sub_ip(a: &mut Poly, b: &Poly) {
@@ -118,12 +116,12 @@ pub fn invntt_tomont(a: &mut Poly) {
 }
 
 /// Pointwise multiplication of polynomials in NTT domain representation and multiplication of resulting polynomial by 2^{-32}.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * 'a' - 1st input polynomial
 /// * 'b' - 2nd input polynomial
-/// 
+///
 /// Returns resulting polynomial
 pub fn pointwise_montgomery(c: &mut Poly, a: &Poly, b: &Poly) {
     for i in 0..N {
@@ -133,11 +131,11 @@ pub fn pointwise_montgomery(c: &mut Poly, a: &Poly, b: &Poly) {
 
 /// For all coefficients c of the input polynomial, compute c0, c1 such that c mod Q = c1*2^D + c0 with -2^{D-1} < c0 <= 2^{D-1}.
 /// Assumes coefficients to be standard representatives.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * 'a' - input polynomial
-/// 
+///
 /// Returns a touple of polynomials with coefficients c0, c1
 pub fn power2round(a1: &mut Poly, a0: &mut Poly) {
     for i in 0..N {
@@ -147,15 +145,15 @@ pub fn power2round(a1: &mut Poly, a0: &mut Poly) {
 
 /// Check infinity norm of polynomial against given bound.
 /// Assumes input coefficients were reduced by reduce32().
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * 'a' - input polynomial
 /// * 'b' - norm bound
-/// 
+///
 /// Returns 0 if norm is strictly smaller than B and B <= (Q-1)/8, 1 otherwise.
 pub fn chknorm(a: &Poly, b: i32) -> i32 {
-    if b > (params::Q - 1)/ 8 {
+    if b > (params::Q - 1) / 8 {
         return 1;
     }
     // for i in a.coeffs.iter() {
@@ -176,12 +174,12 @@ pub fn chknorm(a: &Poly, b: i32) -> i32 {
 }
 
 /// Sample uniformly random coefficients in [0, Q-1] by performing rejection sampling on array of random bytes.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * 'a' - output array (allocated)
 /// * 'b' - array of random bytes
-/// 
+///
 /// Returns number of sampled coefficients. Can be smaller than a.len() if not enough random bytes were given.
 pub fn rej_uniform(a: &mut [i32], alen: usize, buf: &[u8], buflen: usize) -> usize {
     let mut ctr: usize = 0;
@@ -216,7 +214,7 @@ pub fn uniform(a: &mut Poly, seed: &[u8], nonce: u16) {
         let off = buflen % 3;
         for i in 0..off {
             buf[i] = buf[buflen - off + i];
-        }           
+        }
         buflen = fips202::SHAKE128_RATE + off;
         fips202::shake128_squeezeblocks(&mut buf[off..], 1, &mut state);
         ctr += rej_uniform(&mut a.coeffs[ctr..], N - ctr, &buf, buflen);
@@ -239,10 +237,14 @@ pub fn t1_pack(r: &mut [u8], a: &Poly) {
 /// Output coefficients are standard representatives.
 pub fn t1_unpack(r: &mut Poly, a: &[u8]) {
     for i in 0..N / 4 {
-        r.coeffs[4 * i + 0] = (((a[5 * i + 0] >> 0) as u32 | (a[5 * i + 1] as u32) << 8) & 0x3FF) as i32;
-        r.coeffs[4 * i + 1] = (((a[5 * i + 1] >> 2) as u32 | (a[5 * i + 2] as u32) << 6) & 0x3FF) as i32;
-        r.coeffs[4 * i + 2] = (((a[5 * i + 2] >> 4) as u32 | (a[5 * i + 3] as u32) << 4) & 0x3FF) as i32;
-        r.coeffs[4 * i + 3] = (((a[5 * i + 3] >> 6) as u32 | (a[5 * i + 4] as u32) << 2) & 0x3FF) as i32;
+        r.coeffs[4 * i + 0] =
+            (((a[5 * i + 0] >> 0) as u32 | (a[5 * i + 1] as u32) << 8) & 0x3FF) as i32;
+        r.coeffs[4 * i + 1] =
+            (((a[5 * i + 1] >> 2) as u32 | (a[5 * i + 2] as u32) << 6) & 0x3FF) as i32;
+        r.coeffs[4 * i + 2] =
+            (((a[5 * i + 2] >> 4) as u32 | (a[5 * i + 3] as u32) << 4) & 0x3FF) as i32;
+        r.coeffs[4 * i + 3] =
+            (((a[5 * i + 3] >> 6) as u32 | (a[5 * i + 4] as u32) << 2) & 0x3FF) as i32;
     }
 }
 

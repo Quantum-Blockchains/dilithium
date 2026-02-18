@@ -1,5 +1,5 @@
-use sha2::{Sha256, Sha512, Digest};
-use crate::prehash::{PH, prehash_bytes};
+use crate::prehash::{prehash_bytes, PH};
+use sha2::{Digest, Sha256, Sha512};
 
 #[cfg(feature = "acvp-internal")]
 use crate::RandomMode;
@@ -14,16 +14,16 @@ pub type Signature = [u8; SIGNBYTES];
 /// A pair of private and public keys.
 pub struct Keypair {
     pub secret: SecretKey,
-    pub public: PublicKey
+    pub public: PublicKey,
 }
 
 impl Keypair {
     /// Generate a Keypair instance.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * 'entropy' - optional bytes for determining the generation process
-    /// 
+    ///
     /// Returns an instance of Keypair
     pub fn generate(entropy: Option<&[u8]>) -> Keypair {
         let mut pk = [0u8; PUBLICKEYBYTES];
@@ -31,12 +31,12 @@ impl Keypair {
         crate::sign::ml_dsa_44::keypair(&mut pk, &mut sk, entropy);
         Keypair {
             secret: SecretKey::from_bytes(&sk),
-            public: PublicKey::from_bytes(&pk)
+            public: PublicKey::from_bytes(&pk),
         }
     }
 
     /// Convert a Keypair to a bytes array.
-    /// 
+    ///
     /// Returns an array containing private and public keys bytes
     pub fn to_bytes(&self) -> [u8; KEYPAIRBYTES] {
         let mut result = [0u8; KEYPAIRBYTES];
@@ -46,16 +46,16 @@ impl Keypair {
     }
 
     /// Create a Keypair from bytes.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * 'bytes' - private and public keys bytes
-    /// 
+    ///
     /// Returns a Keypair
     pub fn from_bytes(bytes: &[u8]) -> Keypair {
         Keypair {
             secret: SecretKey::from_bytes(&bytes[..SECRETKEYBYTES]),
-            public: PublicKey::from_bytes(&bytes[SECRETKEYBYTES..])
+            public: PublicKey::from_bytes(&bytes[SECRETKEYBYTES..]),
         }
     }
 
@@ -64,19 +64,24 @@ impl Keypair {
     /// # Arguments
     ///
     /// * 'msg' - message to sign
-    /// 
+    ///
     /// Returns Option<Signature>
-    pub fn sign(&self, msg: &[u8], ctx: Option<&[u8]>, rand: crate::RandomMode) -> Option<Signature> {
+    pub fn sign(
+        &self,
+        msg: &[u8],
+        ctx: Option<&[u8]>,
+        rand: crate::RandomMode,
+    ) -> Option<Signature> {
         self.secret.sign(msg, ctx, rand)
     }
 
     /// Verify a signature for a given message with a public key.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * 'msg' - message that is claimed to be signed
     /// * 'sig' - signature to verify
-    /// 
+    ///
     /// Returns 'true' if the verification process was successful, 'false' otherwise
     pub fn verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>) -> bool {
         self.public.verify(msg, sig, ctx)
@@ -87,19 +92,25 @@ impl Keypair {
     /// # Arguments
     ///
     /// * 'msg' - message to sign
-    /// 
+    ///
     /// Returns Option<Signature>
-    pub fn prehash_sign(&self, msg: &[u8], ctx: Option<&[u8]>, rand: crate::RandomMode, ph: PH) -> Option<Signature> {
+    pub fn prehash_sign(
+        &self,
+        msg: &[u8],
+        ctx: Option<&[u8]>,
+        rand: crate::RandomMode,
+        ph: PH,
+    ) -> Option<Signature> {
         self.secret.prehash_sign(msg, ctx, rand, ph)
     }
 
     /// Verify a signature for a given message with a public key.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * 'msg' - message that is claimed to be signed
     /// * 'sig' - signature to verify
-    /// 
+    ///
     /// Returns 'true' if the verification process was successful, 'false' otherwise
     pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph: PH) -> bool {
         self.public.prehash_verify(msg, sig, ctx, ph)
@@ -108,25 +119,25 @@ impl Keypair {
 
 /// Private key.
 pub struct SecretKey {
-    pub bytes: [u8; SECRETKEYBYTES]
+    pub bytes: [u8; SECRETKEYBYTES],
 }
 
 impl SecretKey {
     /// Returns a copy of underlying bytes.
     pub fn to_bytes(&self) -> [u8; SECRETKEYBYTES] {
-       self.bytes.clone() 
+        self.bytes.clone()
     }
 
     /// Create a SecretKey from bytes.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * 'bytes' - private key bytes
-    /// 
+    ///
     /// Returns a SecretKey
     pub fn from_bytes(bytes: &[u8]) -> SecretKey {
         SecretKey {
-            bytes: bytes.try_into().expect("")
+            bytes: bytes.try_into().expect(""),
         }
     }
 
@@ -137,9 +148,14 @@ impl SecretKey {
     /// * 'msg' - message to sign
     /// * 'ctx' - context string
     /// * 'hedged' - wether to use RNG or not
-    /// 
+    ///
     /// Returns Option<Signature>
-    pub fn sign(&self, msg: &[u8], ctx: Option<&[u8]>, rand: crate::RandomMode) -> Option<Signature> {
+    pub fn sign(
+        &self,
+        msg: &[u8],
+        ctx: Option<&[u8]>,
+        rand: crate::RandomMode,
+    ) -> Option<Signature> {
         let m = crate::build_mprime(msg, ctx, false);
         if m.is_none() {
             return None;
@@ -148,18 +164,24 @@ impl SecretKey {
         crate::sign::ml_dsa_44::signature(&mut sig, m.unwrap().as_slice(), &self.bytes, rand);
         Some(sig)
     }
-    
+
     /// Compute a signature for a given message.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * 'msg' - message to sign
     /// * 'ctx' - context string
     /// * 'hedged' - wether to use RNG or not
     /// * 'ph' - pre-hash function
-    /// 
+    ///
     /// Returns Option<Signature>
-    pub fn prehash_sign(&self, msg: &[u8], ctx: Option<&[u8]>, rand: crate::RandomMode, ph: PH) -> Option<Signature>  {
+    pub fn prehash_sign(
+        &self,
+        msg: &[u8],
+        ctx: Option<&[u8]>,
+        rand: crate::RandomMode,
+        ph: PH,
+    ) -> Option<Signature> {
         let phm = prehash_bytes(ph, msg);
         let m = crate::build_mprime(phm.as_slice(), ctx, true);
         if m.is_none() {
@@ -186,7 +208,7 @@ impl SecretKey {
 }
 
 pub struct PublicKey {
-    pub bytes: [u8; PUBLICKEYBYTES]
+    pub bytes: [u8; PUBLICKEYBYTES],
 }
 
 impl PublicKey {
@@ -196,26 +218,26 @@ impl PublicKey {
     }
 
     /// Create a PublicKey from bytes.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * 'bytes' - public key bytes
-    /// 
+    ///
     /// Returns a PublicKey
     pub fn from_bytes(bytes: &[u8]) -> PublicKey {
         PublicKey {
-            bytes: bytes.try_into().expect("")
+            bytes: bytes.try_into().expect(""),
         }
     }
 
     /// Verify a signature for a given message with a public key.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * 'msg' - message that is claimed to be signed
     /// * 'sig' - signature to verify
     /// * 'ctx' - context string
-    /// 
+    ///
     /// Returns 'true' if the verification process was successful, 'false' otherwise
     pub fn verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>) -> bool {
         if sig.len() != SIGNBYTES {
@@ -229,14 +251,14 @@ impl PublicKey {
     }
 
     /// Verify a signature for a given message with a public key.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * 'msg' - message that is claimed to be signed
     /// * 'sig' - signature to verify
     /// * 'ctx' - context string
     /// * 'ph' - pre-hash function
-    /// 
+    ///
     /// Returns 'true' if the verification process was successful, 'false' otherwise
     pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph: PH) -> bool {
         if sig.len() != SIGNBYTES {

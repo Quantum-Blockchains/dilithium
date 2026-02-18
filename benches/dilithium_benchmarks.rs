@@ -1,6 +1,6 @@
 // -*- mode: rust; -*-
 
-use criterion::{Criterion, criterion_group};
+use criterion::{criterion_group, Criterion};
 
 mod dilithium_benches {
     use crystals_dilithium::dilithium2::Keypair;

@@ -3,7 +3,7 @@
 /// # Arguments
 ///
 /// * 'a' - input element
-/// 
+///
 /// Returns a touple (a0, a1).
 pub fn power2round(a: i32) -> (i32, i32) {
     use crate::params::D;

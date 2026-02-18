@@ -1,20 +1,19 @@
-pub mod ml_dsa_44;
-pub mod ml_dsa_65;
-pub mod ml_dsa_87;
 pub mod dilithium2;
 pub mod dilithium3;
 pub mod dilithium5;
 pub mod fips202;
+pub mod ml_dsa_44;
+pub mod ml_dsa_65;
+pub mod ml_dsa_87;
 pub mod ntt;
 pub mod packing;
 pub mod params;
 pub mod poly;
 pub mod polyvec;
-pub mod rounding;
-pub mod reduce;
-pub mod sign;
 pub mod prehash;
-
+pub mod reduce;
+pub mod rounding;
+pub mod sign;
 
 pub enum RandomMode {
     /// Deterministyczny podpis (ACVP: deterministic=true)
@@ -28,9 +27,9 @@ pub enum RandomMode {
 
 use rand::RngCore;
 /// Generate random bytes.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * 'bytes' - an array to fill with random data
 /// * 'n' - number of bytes to generate
 fn random_bytes(bytes: &mut [u8], n: usize) {

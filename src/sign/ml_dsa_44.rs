@@ -1,6 +1,11 @@
 #[cfg(feature = "acvp-internal")]
 use crate::RandomMode;
-use crate::{fips202, packing, params, poly, poly::Poly, polyvec, polyvec::lvl2::{Polyveck, Polyvecl}};
+use crate::{
+    fips202, packing, params, poly,
+    poly::Poly,
+    polyvec,
+    polyvec::lvl2::{Polyveck, Polyvecl},
+};
 const K: usize = params::ml_dsa_44::K;
 const L: usize = params::ml_dsa_44::L;
 
@@ -12,17 +17,17 @@ const L: usize = params::ml_dsa_44::L;
 /// * 'sk' - preallocated buffer for private key
 /// * 'seed' - optional seed; if None [random_bytes()] is used for randomness generation
 pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
-    let mut init_seed = [0u8; params::SEEDBYTES+2];
+    let mut init_seed = [0u8; params::SEEDBYTES + 2];
     match seed {
         Some(x) => init_seed[..params::SEEDBYTES].copy_from_slice(x),
         None => crate::random_bytes(&mut init_seed, params::SEEDBYTES),
     };
     init_seed[params::SEEDBYTES] = K as u8;
-    init_seed[params::SEEDBYTES+1] = L as u8;
+    init_seed[params::SEEDBYTES + 1] = L as u8;
 
     const SEEDBUF_LEN: usize = 2 * params::SEEDBYTES + params::CRHBYTES;
     let mut seedbuf = [0u8; SEEDBUF_LEN];
-    fips202::shake256(&mut seedbuf, SEEDBUF_LEN, &init_seed, params::SEEDBYTES+2);
+    fips202::shake256(&mut seedbuf, SEEDBUF_LEN, &init_seed, params::SEEDBYTES + 2);
 
     let mut rho = [0u8; params::SEEDBYTES];
     rho.copy_from_slice(&seedbuf[..params::SEEDBYTES]);
@@ -58,7 +63,12 @@ pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
     packing::ml_dsa_44::pack_pk(pk, &rho, &t1);
 
     let mut tr = [0u8; params::TR_BYTES];
-    fips202::shake256(&mut tr, params::TR_BYTES, pk, params::ml_dsa_44::PUBLICKEYBYTES);
+    fips202::shake256(
+        &mut tr,
+        params::TR_BYTES,
+        pk,
+        params::ml_dsa_44::PUBLICKEYBYTES,
+    );
 
     packing::ml_dsa_44::pack_sk(sk, &rho, &tr, &key, &t0, &s1, &s2);
 }
@@ -79,13 +89,25 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], rnd: crate::RandomMode) 
     let mut s1 = Polyvecl::default();
     let mut s2 = Polyveck::default();
 
-    packing::ml_dsa_44::unpack_sk(&mut rho, &mut tr, &mut keymu[..params::SEEDBYTES], &mut t0, &mut s1, &mut s2, &sk);
+    packing::ml_dsa_44::unpack_sk(
+        &mut rho,
+        &mut tr,
+        &mut keymu[..params::SEEDBYTES],
+        &mut t0,
+        &mut s1,
+        &mut s2,
+        &sk,
+    );
 
     let mut state = fips202::KeccakState::default();
     fips202::shake256_absorb(&mut state, &tr, params::TR_BYTES);
     fips202::shake256_absorb(&mut state, &msg, msg.len());
     fips202::shake256_finalize(&mut state);
-    fips202::shake256_squeeze(&mut keymu[params::SEEDBYTES..], params::CRHBYTES, &mut state);
+    fips202::shake256_squeeze(
+        &mut keymu[params::SEEDBYTES..],
+        params::CRHBYTES,
+        &mut state,
+    );
 
     signature_core(sig, &keymu, &rho, &mut t0, &mut s1, &mut s2, rnd);
 }
@@ -98,7 +120,15 @@ pub fn signature_mu(sig: &mut [u8], mu: &[u8], sk: &[u8], rnd: crate::RandomMode
     let mut s1 = Polyvecl::default();
     let mut s2 = Polyveck::default();
 
-    packing::ml_dsa_44::unpack_sk(&mut rho, &mut tr, &mut keymu[..params::SEEDBYTES], &mut t0, &mut s1, &mut s2, &sk);
+    packing::ml_dsa_44::unpack_sk(
+        &mut rho,
+        &mut tr,
+        &mut keymu[..params::SEEDBYTES],
+        &mut t0,
+        &mut s1,
+        &mut s2,
+        &sk,
+    );
 
     // In the pre-hash interface, 'mu' is provided by the caller and must be CRHBYTES long
     assert_eq!(mu.len(), params::CRHBYTES);
@@ -116,17 +146,14 @@ fn signature_core(
     s2: &mut Polyveck,
     randomness: crate::RandomMode,
 ) {
-
-    let mut rnd = [0u8; params::SEEDBYTES]; 
+    let mut rnd = [0u8; params::SEEDBYTES];
     match randomness {
-        crate::RandomMode::Deterministic => {},
-        crate::RandomMode::Hedged => {
-            crate::random_bytes(&mut rnd, params::SEEDBYTES)
-        },
+        crate::RandomMode::Deterministic => {}
+        crate::RandomMode::Hedged => crate::random_bytes(&mut rnd, params::SEEDBYTES),
         #[cfg(feature = "acvp-internal")]
         crate::RandomMode::Fixed(r) => {
             rnd.copy_from_slice(r.as_slice());
-        },
+        }
     };
 
     let mut state = fips202::KeccakState::default();
@@ -178,7 +205,11 @@ fn signature_core(
         polyvec::lvl2::l_add(&mut z, &y);
         polyvec::lvl2::l_reduce(&mut z);
 
-        if polyvec::lvl2::l_chknorm(&z, (params::ml_dsa_44::GAMMA1 - params::ml_dsa_44::BETA) as i32) > 0 {
+        if polyvec::lvl2::l_chknorm(
+            &z,
+            (params::ml_dsa_44::GAMMA1 - params::ml_dsa_44::BETA) as i32,
+        ) > 0
+        {
             continue;
         }
 
@@ -187,7 +218,11 @@ fn signature_core(
         polyvec::lvl2::k_sub(&mut w0, &h);
         polyvec::lvl2::k_reduce(&mut w0);
 
-        if polyvec::lvl2::k_chknorm(&w0, (params::ml_dsa_44::GAMMA2 - params::ml_dsa_44::BETA) as i32) > 0 {
+        if polyvec::lvl2::k_chknorm(
+            &w0,
+            (params::ml_dsa_44::GAMMA2 - params::ml_dsa_44::BETA) as i32,
+        ) > 0
+        {
             continue;
         }
 
@@ -333,50 +368,50 @@ mod tests {
         super::signature(&mut sig, &msg, &sk, crate::RandomMode::Deterministic);
         assert!(super::verify(&sig, &msg, &pk));
     }
-//    #[test]
-//    fn keypair() {
-//        let seed: [u8; crate::params::SEEDBYTES] = [];
-//        let mut pk = [0u8; crate::params::ml_dsa_44::PUBLICKEYBYTES];
-//        let mut sk = [0u8; crate::params::ml_dsa_44::SECRETKEYBYTES];
-//        super::keypair(&mut pk, &mut sk, Some(&seed));
-//
-//        let test_pk: [u8; crate::params::ml_dsa_44::PUBLICKEYBYTES] = [];
-//        let test_sk: [u8; crate::params::ml_dsa_44::SECRETKEYBYTES] = [];
-//        assert_eq!(test_pk, pk);
-//        assert_eq!(test_sk, sk);
-//        assert_eq!(
-//            pk[..crate::params::SEEDBYTES],
-//            sk[..crate::params::SEEDBYTES]
-//        );
-//    }
-//
-//    #[test]
-//    fn signature() {
-//        let msg: [u8; 33] = [];
-//        let sk: [u8; crate::params::ml_dsa_44::SECRETKEYBYTES] = [];
-//        let mut sig = [0u8; crate::params::ml_dsa_44::SIGNBYTES];
-//        super::signature(&mut sig, &msg, &sk, false);
-//
-//        let test_sig: [u8; crate::params::ml_dsa_44::SIGNBYTES] = [];
-//        assert!(test_sig == sig);
-//    }
-//
-//    #[test]
-//    fn signature2() {
-//        let msg: [u8; 66] = [];
-//        let sk: [u8; crate::params::ml_dsa_44::SECRETKEYBYTES] = [];
-//        let mut sig = [0u8; crate::params::ml_dsa_44::SIGNBYTES];
-//        super::signature(&mut sig, &msg, &sk, false);
-//
-//        let test_sig: [u8; crate::params::ml_dsa_44::SIGNBYTES + 66] = [];
-//        assert!(test_sig[..crate::params::ml_dsa_44::SIGNBYTES] == sig);
-//    }
-//
-//    #[test]
-//    fn verify() {
-//        let msg: [u8; 33] = [];
-//        let sig: [u8; crate::params::ml_dsa_44::SIGNBYTES] = [];
-//        let pk: [u8; crate::params::ml_dsa_44::PUBLICKEYBYTES] = []
-//        assert!(super::verify(&sig, &msg, &pk));
-//    }
+    //    #[test]
+    //    fn keypair() {
+    //        let seed: [u8; crate::params::SEEDBYTES] = [];
+    //        let mut pk = [0u8; crate::params::ml_dsa_44::PUBLICKEYBYTES];
+    //        let mut sk = [0u8; crate::params::ml_dsa_44::SECRETKEYBYTES];
+    //        super::keypair(&mut pk, &mut sk, Some(&seed));
+    //
+    //        let test_pk: [u8; crate::params::ml_dsa_44::PUBLICKEYBYTES] = [];
+    //        let test_sk: [u8; crate::params::ml_dsa_44::SECRETKEYBYTES] = [];
+    //        assert_eq!(test_pk, pk);
+    //        assert_eq!(test_sk, sk);
+    //        assert_eq!(
+    //            pk[..crate::params::SEEDBYTES],
+    //            sk[..crate::params::SEEDBYTES]
+    //        );
+    //    }
+    //
+    //    #[test]
+    //    fn signature() {
+    //        let msg: [u8; 33] = [];
+    //        let sk: [u8; crate::params::ml_dsa_44::SECRETKEYBYTES] = [];
+    //        let mut sig = [0u8; crate::params::ml_dsa_44::SIGNBYTES];
+    //        super::signature(&mut sig, &msg, &sk, false);
+    //
+    //        let test_sig: [u8; crate::params::ml_dsa_44::SIGNBYTES] = [];
+    //        assert!(test_sig == sig);
+    //    }
+    //
+    //    #[test]
+    //    fn signature2() {
+    //        let msg: [u8; 66] = [];
+    //        let sk: [u8; crate::params::ml_dsa_44::SECRETKEYBYTES] = [];
+    //        let mut sig = [0u8; crate::params::ml_dsa_44::SIGNBYTES];
+    //        super::signature(&mut sig, &msg, &sk, false);
+    //
+    //        let test_sig: [u8; crate::params::ml_dsa_44::SIGNBYTES + 66] = [];
+    //        assert!(test_sig[..crate::params::ml_dsa_44::SIGNBYTES] == sig);
+    //    }
+    //
+    //    #[test]
+    //    fn verify() {
+    //        let msg: [u8; 33] = [];
+    //        let sig: [u8; crate::params::ml_dsa_44::SIGNBYTES] = [];
+    //        let pk: [u8; crate::params::ml_dsa_44::PUBLICKEYBYTES] = []
+    //        assert!(super::verify(&sig, &msg, &pk));
+    //    }
 }

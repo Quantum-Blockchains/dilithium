@@ -2,7 +2,8 @@ use super::{Poly, N};
 use crate::{fips202, params, rounding};
 
 const UNIFORM_ETA_NBLOCKS: usize = (135 + fips202::SHAKE256_RATE) / fips202::SHAKE256_RATE;
-const UNIFORM_GAMMA1_NBLOCKS: usize = (params::lvl5::POLYZ_PACKEDBYTES + fips202::SHAKE256_RATE - 1) / fips202::SHAKE256_RATE;
+const UNIFORM_GAMMA1_NBLOCKS: usize =
+    (params::lvl5::POLYZ_PACKEDBYTES + fips202::SHAKE256_RATE - 1) / fips202::SHAKE256_RATE;
 
 /// For all coefficients c of the input polynomial, compute high and low bits c0, c1 such c mod Q = c1*ALPHA + c0 with -ALPHA/2 < c0 <= ALPHA/2 except c1 = (Q-1)/ALPHA where we set c1 = 0 and -ALPHA/2 <= c0 = c mod Q - Q < 0.
 /// Assumes coefficients to be standard representatives.
@@ -189,7 +190,6 @@ pub fn eta_unpack(r: &mut Poly, a: &[u8]) {
     }
 }
 
-
 /// Bit-pack polynomial z with coefficients in [-(GAMMA1 - 1), GAMMA1 - 1].
 /// Input coefficients are assumed to be standard representatives.*
 pub fn z_pack(r: &mut [u8], a: &Poly) {
@@ -198,7 +198,7 @@ pub fn z_pack(r: &mut [u8], a: &Poly) {
     for i in 0..N / 2 {
         t[0] = params::lvl5::GAMMA1 as i32 - a.coeffs[2 * i + 0];
         t[1] = params::lvl5::GAMMA1 as i32 - a.coeffs[2 * i + 1];
-  
+
         r[5 * i + 0] = (t[0]) as u8;
         r[5 * i + 1] = (t[0] >> 8) as u8;
         r[5 * i + 2] = (t[0] >> 16) as u8;
@@ -216,12 +216,12 @@ pub fn z_unpack(r: &mut Poly, a: &[u8]) {
         r.coeffs[2 * i + 0] |= (a[5 * i + 1] as i32) << 8;
         r.coeffs[2 * i + 0] |= (a[5 * i + 2] as i32) << 16;
         r.coeffs[2 * i + 0] &= 0xFFFFF;
-  
+
         r.coeffs[2 * i + 1] = (a[5 * i + 2] as i32) >> 4;
         r.coeffs[2 * i + 1] |= (a[5 * i + 3] as i32) << 4;
         r.coeffs[2 * i + 1] |= (a[5 * i + 4] as i32) << 12;
         r.coeffs[2 * i + 0] &= 0xFFFFF;
-  
+
         r.coeffs[2 * i + 0] = params::lvl5::GAMMA1 as i32 - r.coeffs[2 * i + 0];
         r.coeffs[2 * i + 1] = params::lvl5::GAMMA1 as i32 - r.coeffs[2 * i + 1];
     }
