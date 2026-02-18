@@ -1,5 +1,4 @@
 use crate::prehash::{prehash_bytes, PH};
-use sha2::{Digest, Sha256, Sha512};
 
 pub const SECRETKEYBYTES: usize = crate::params::ml_dsa_87::SECRETKEYBYTES;
 pub const PUBLICKEYBYTES: usize = crate::params::ml_dsa_87::PUBLICKEYBYTES;
@@ -122,7 +121,7 @@ pub struct SecretKey {
 impl SecretKey {
     /// Returns a copy of underlying bytes.
     pub fn to_bytes(&self) -> [u8; SECRETKEYBYTES] {
-        self.bytes.clone()
+        self.bytes
     }
 
     /// Create a SecretKey from bytes.
@@ -154,9 +153,7 @@ impl SecretKey {
         rand: crate::RandomMode,
     ) -> Option<Signature> {
         let m = crate::build_mprime(msg, ctx, false);
-        if m.is_none() {
-            return None;
-        }
+        m.as_ref()?;
         let mut sig: Signature = [0u8; SIGNBYTES];
         crate::sign::ml_dsa_87::signature(&mut sig, m.unwrap().as_slice(), &self.bytes, rand);
         Some(sig)
@@ -181,9 +178,7 @@ impl SecretKey {
     ) -> Option<Signature> {
         let phm = prehash_bytes(ph, msg);
         let m = crate::build_mprime(phm.as_slice(), ctx, true);
-        if m.is_none() {
-            return None;
-        }
+        m.as_ref()?;
         let mut sig: Signature = [0u8; SIGNBYTES];
         crate::sign::ml_dsa_87::signature(&mut sig, m.unwrap().as_slice(), &self.bytes, rand);
         Some(sig)
@@ -211,7 +206,7 @@ pub struct PublicKey {
 impl PublicKey {
     /// Returns a copy of underlying bytes.
     pub fn to_bytes(&self) -> [u8; PUBLICKEYBYTES] {
-        self.bytes.clone()
+        self.bytes
     }
 
     /// Create a PublicKey from bytes.

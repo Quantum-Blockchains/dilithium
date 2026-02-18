@@ -165,7 +165,7 @@ pub fn chknorm(a: &Poly, b: i32) -> i32 {
     // }
     for i in 0..N {
         let mut t = a.coeffs[i] >> 31;
-        t = a.coeffs[i] - (t & 2 * a.coeffs[i]);
+        t = a.coeffs[i] - (t & (2 * a.coeffs[i]));
         if t >= b {
             return 1;
         }
@@ -208,7 +208,7 @@ pub fn uniform(a: &mut Poly, seed: &[u8], nonce: u16) {
     fips202::shake128_squeezeblocks(&mut buf, UNIFORM_NBLOCKS, &mut state);
 
     let mut buflen: usize = UNIFORM_NBLOCKS * fips202::SHAKE128_RATE;
-    let mut ctr = rej_uniform(&mut a.coeffs, N, &mut buf, buflen);
+    let mut ctr = rej_uniform(&mut a.coeffs, N, &buf, buflen);
 
     while ctr < N {
         let off = buflen % 3;
@@ -223,6 +223,7 @@ pub fn uniform(a: &mut Poly, seed: &[u8], nonce: u16) {
 
 /// Bit-pack polynomial t1 with coefficients fitting in 10 bits.
 /// Input coefficients are assumed to be standard representatives.
+#[allow(clippy::identity_op)]
 pub fn t1_pack(r: &mut [u8], a: &Poly) {
     for i in 0..N / 4 {
         r[5 * i + 0] = (a.coeffs[4 * i + 0] >> 0) as u8;
@@ -235,6 +236,7 @@ pub fn t1_pack(r: &mut [u8], a: &Poly) {
 
 /// Unpack polynomial t1 with 9-bit coefficients.
 /// Output coefficients are standard representatives.
+#[allow(clippy::identity_op)]
 pub fn t1_unpack(r: &mut Poly, a: &[u8]) {
     for i in 0..N / 4 {
         r.coeffs[4 * i + 0] =
@@ -249,6 +251,7 @@ pub fn t1_unpack(r: &mut Poly, a: &[u8]) {
 }
 
 /// Bit-pack polynomial t0 with coefficients in [-2^{D-1}, 2^{D-1}].
+#[allow(clippy::identity_op)]
 pub fn t0_pack(r: &mut [u8], a: &Poly) {
     let mut t = [0i32; 8];
 
@@ -287,6 +290,7 @@ pub fn t0_pack(r: &mut [u8], a: &Poly) {
 
 /// Unpack polynomial t0 with coefficients in ]-2^{D-1}, 2^{D-1}].
 /// Output coefficients lie in ]Q-2^{D-1},Q+2^{D-1}].
+#[allow(clippy::identity_op)]
 pub fn t0_unpack(r: &mut Poly, a: &[u8]) {
     for i in 0..N / 8 {
         r.coeffs[8 * i + 0] = a[13 * i + 0] as i32;

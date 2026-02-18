@@ -1,5 +1,3 @@
-#[cfg(feature = "acvp-internal")]
-use crate::RandomMode;
 use crate::{
     fips202, packing, params, poly,
     poly::Poly,
@@ -96,12 +94,12 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], rnd: crate::RandomMode) 
         &mut t0,
         &mut s1,
         &mut s2,
-        &sk,
+        sk,
     );
 
     let mut state = fips202::KeccakState::default();
     fips202::shake256_absorb(&mut state, &tr, params::TR_BYTES);
-    fips202::shake256_absorb(&mut state, &msg, msg.len());
+    fips202::shake256_absorb(&mut state, msg, msg.len());
     fips202::shake256_finalize(&mut state);
     fips202::shake256_squeeze(
         &mut keymu[params::SEEDBYTES..],
@@ -127,7 +125,7 @@ pub fn signature_mu(sig: &mut [u8], mu: &[u8], sk: &[u8], rnd: crate::RandomMode
         &mut t0,
         &mut s1,
         &mut s2,
-        &sk,
+        sk,
     );
 
     // In the pre-hash interface, 'mu' is provided by the caller and must be CRHBYTES long
@@ -193,7 +191,7 @@ fn signature_core(
 
         state.init();
         fips202::shake256_absorb(&mut state, &keymu[params::SEEDBYTES..], params::CRHBYTES);
-        fips202::shake256_absorb(&mut state, &sig, K * params::ml_dsa_44::POLYW1_PACKEDBYTES);
+        fips202::shake256_absorb(&mut state, sig, K * params::ml_dsa_44::POLYW1_PACKEDBYTES);
         fips202::shake256_finalize(&mut state);
         fips202::shake256_squeeze(sig, params::ml_dsa_44::C_DASH_BYTES, &mut state);
 
@@ -313,7 +311,7 @@ pub fn verify_mu(sig: &[u8], mu: &[u8], pk: &[u8]) -> bool {
     poly::ntt(&mut cp);
     polyvec::lvl2::k_shiftl(&mut t1);
     polyvec::lvl2::k_ntt(&mut t1);
-    let t1_2 = t1.clone();
+    let t1_2 = t1;
     polyvec::lvl2::k_pointwise_poly_montgomery(&mut t1, &cp, &t1_2);
 
     polyvec::lvl2::k_sub(&mut w1, &t1);

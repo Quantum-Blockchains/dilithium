@@ -101,12 +101,12 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
         &mut t0,
         &mut s1,
         &mut s2,
-        &sk,
+        sk,
     );
 
     let mut state = fips202::KeccakState::default();
     fips202::shake256_absorb(&mut state, &tr, params::SEEDBYTES);
-    fips202::shake256_absorb(&mut state, &msg, msg.len());
+    fips202::shake256_absorb(&mut state, msg, msg.len());
     fips202::shake256_finalize(&mut state);
     fips202::shake256_squeeze(
         &mut keymu[params::SEEDBYTES..],
@@ -154,7 +154,7 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
 
         state.init();
         fips202::shake256_absorb(&mut state, &keymu[params::SEEDBYTES..], params::CRHBYTES);
-        fips202::shake256_absorb(&mut state, &sig, K * params::lvl5::POLYW1_PACKEDBYTES);
+        fips202::shake256_absorb(&mut state, sig, K * params::lvl5::POLYW1_PACKEDBYTES);
         fips202::shake256_finalize(&mut state);
         fips202::shake256_squeeze(sig, params::SEEDBYTES, &mut state);
 
@@ -263,7 +263,7 @@ pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
     poly::ntt(&mut cp);
     polyvec::lvl5::k_shiftl(&mut t1);
     polyvec::lvl5::k_ntt(&mut t1);
-    let t1_2 = t1.clone();
+    let t1_2 = t1;
     polyvec::lvl5::k_pointwise_poly_montgomery(&mut t1, &cp, &t1_2);
 
     polyvec::lvl5::k_sub(&mut w1, &t1);

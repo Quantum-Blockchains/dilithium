@@ -1,5 +1,4 @@
 use crystals_dilithium::{prehash::PH, RandomMode};
-use serde_json::Value;
 use std::fs::File;
 use std::path::Path;
 
@@ -76,7 +75,7 @@ fn acvp_sig_gen() {
                 (false, true) => RandomMode::Hedged,
             };
 
-            let ph = if tg.pre_hash == acvp::PreHash::PreHash {
+            let ph = if tg.pre_hash == acvp::PreHashMode::PreHash {
                 match tc.hash_alg.as_str() {
                     "SHA2-224" => PH::SHA224,
                     "SHA2-256" => PH::SHA256,
@@ -130,7 +129,7 @@ fn acvp_sig_gen() {
                 }
             } else {
                 match (&tg.parameter_set, &tg.pre_hash) {
-                    (acvp::ParameterSet::MLDSA44, acvp::PreHash::Pure) => {
+                    (acvp::ParameterSet::MLDSA44, acvp::PreHashMode::Pure) => {
                         let sk = crystals_dilithium::ml_dsa_44::SecretKey::from_bytes(&tc.sk);
                         let sig = sk.sign(&tc.message, Some(&tc.context), rand).unwrap();
                         assert_eq!(
@@ -139,7 +138,7 @@ fn acvp_sig_gen() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA44, acvp::PreHash::None) => {
+                    (acvp::ParameterSet::MLDSA44, acvp::PreHashMode::None) => {
                         let sk = crystals_dilithium::ml_dsa_44::SecretKey::from_bytes(&tc.sk);
                         let sig = sk.sign_internal(&tc.message, rand).unwrap();
                         assert_eq!(
@@ -148,7 +147,7 @@ fn acvp_sig_gen() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA44, acvp::PreHash::PreHash) => {
+                    (acvp::ParameterSet::MLDSA44, acvp::PreHashMode::PreHash) => {
                         let sk = crystals_dilithium::ml_dsa_44::SecretKey::from_bytes(&tc.sk);
                         let sig = sk
                             .prehash_sign(&tc.message, Some(&tc.context), rand, ph)
@@ -159,7 +158,7 @@ fn acvp_sig_gen() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA65, acvp::PreHash::Pure) => {
+                    (acvp::ParameterSet::MLDSA65, acvp::PreHashMode::Pure) => {
                         let sk = crystals_dilithium::ml_dsa_65::SecretKey::from_bytes(&tc.sk);
                         let sig = sk.sign(&tc.message, Some(&tc.context), rand).unwrap();
                         assert_eq!(
@@ -168,7 +167,7 @@ fn acvp_sig_gen() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA65, acvp::PreHash::None) => {
+                    (acvp::ParameterSet::MLDSA65, acvp::PreHashMode::None) => {
                         let sk = crystals_dilithium::ml_dsa_65::SecretKey::from_bytes(&tc.sk);
                         let sig = sk.sign_internal(&tc.message, rand).unwrap();
                         assert_eq!(
@@ -177,7 +176,7 @@ fn acvp_sig_gen() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA65, acvp::PreHash::PreHash) => {
+                    (acvp::ParameterSet::MLDSA65, acvp::PreHashMode::PreHash) => {
                         let sk = crystals_dilithium::ml_dsa_65::SecretKey::from_bytes(&tc.sk);
                         let sig = sk
                             .prehash_sign(&tc.message, Some(&tc.context), rand, ph)
@@ -188,7 +187,7 @@ fn acvp_sig_gen() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA87, acvp::PreHash::Pure) => {
+                    (acvp::ParameterSet::MLDSA87, acvp::PreHashMode::Pure) => {
                         let sk = crystals_dilithium::ml_dsa_87::SecretKey::from_bytes(&tc.sk);
                         let sig = sk.sign(&tc.message, Some(&tc.context), rand).unwrap();
                         assert_eq!(
@@ -197,7 +196,7 @@ fn acvp_sig_gen() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA87, acvp::PreHash::None) => {
+                    (acvp::ParameterSet::MLDSA87, acvp::PreHashMode::None) => {
                         let sk = crystals_dilithium::ml_dsa_87::SecretKey::from_bytes(&tc.sk);
                         let sig = sk.sign_internal(&tc.message, rand).unwrap();
                         assert_eq!(
@@ -206,7 +205,7 @@ fn acvp_sig_gen() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA87, acvp::PreHash::PreHash) => {
+                    (acvp::ParameterSet::MLDSA87, acvp::PreHashMode::PreHash) => {
                         let sk = crystals_dilithium::ml_dsa_87::SecretKey::from_bytes(&tc.sk);
                         let sig = sk
                             .prehash_sign(&tc.message, Some(&tc.context), rand, ph)
@@ -234,7 +233,7 @@ fn acvp_sig_ver() {
 
     for tg in tv.test_groups {
         for tc in tg.tests {
-            let ph = if tg.pre_hash == acvp::PreHash::PreHash {
+            let ph = if tg.pre_hash == acvp::PreHashMode::PreHash {
                 match tc.hash_alg.as_str() {
                     "SHA2-224" => PH::SHA224,
                     "SHA2-256" => PH::SHA256,
@@ -285,7 +284,7 @@ fn acvp_sig_ver() {
                 }
             } else {
                 match (&tg.parameter_set, &tg.pre_hash) {
-                    (acvp::ParameterSet::MLDSA44, acvp::PreHash::Pure) => {
+                    (acvp::ParameterSet::MLDSA44, acvp::PreHashMode::Pure) => {
                         let pk = crystals_dilithium::ml_dsa_44::PublicKey::from_bytes(&tc.pk);
                         assert_eq!(
                             pk.verify(&tc.message, &tc.signature, Some(&tc.context)),
@@ -293,7 +292,7 @@ fn acvp_sig_ver() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA44, acvp::PreHash::None) => {
+                    (acvp::ParameterSet::MLDSA44, acvp::PreHashMode::None) => {
                         let pk = crystals_dilithium::ml_dsa_44::PublicKey::from_bytes(&tc.pk);
                         assert_eq!(
                             pk.verify_internal(&tc.message, &tc.signature),
@@ -301,7 +300,7 @@ fn acvp_sig_ver() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA44, acvp::PreHash::PreHash) => {
+                    (acvp::ParameterSet::MLDSA44, acvp::PreHashMode::PreHash) => {
                         let pk = crystals_dilithium::ml_dsa_44::PublicKey::from_bytes(&tc.pk);
                         assert_eq!(
                             pk.prehash_verify(&tc.message, &tc.signature, Some(&tc.context), ph),
@@ -309,7 +308,7 @@ fn acvp_sig_ver() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA65, acvp::PreHash::Pure) => {
+                    (acvp::ParameterSet::MLDSA65, acvp::PreHashMode::Pure) => {
                         let pk = crystals_dilithium::ml_dsa_65::PublicKey::from_bytes(&tc.pk);
                         assert_eq!(
                             pk.verify(&tc.message, &tc.signature, Some(&tc.context)),
@@ -317,7 +316,7 @@ fn acvp_sig_ver() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA65, acvp::PreHash::None) => {
+                    (acvp::ParameterSet::MLDSA65, acvp::PreHashMode::None) => {
                         let pk = crystals_dilithium::ml_dsa_65::PublicKey::from_bytes(&tc.pk);
                         assert_eq!(
                             pk.verify_internal(&tc.message, &tc.signature),
@@ -325,7 +324,7 @@ fn acvp_sig_ver() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA65, acvp::PreHash::PreHash) => {
+                    (acvp::ParameterSet::MLDSA65, acvp::PreHashMode::PreHash) => {
                         let pk = crystals_dilithium::ml_dsa_65::PublicKey::from_bytes(&tc.pk);
                         assert_eq!(
                             pk.prehash_verify(&tc.message, &tc.signature, Some(&tc.context), ph),
@@ -333,7 +332,7 @@ fn acvp_sig_ver() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA87, acvp::PreHash::Pure) => {
+                    (acvp::ParameterSet::MLDSA87, acvp::PreHashMode::Pure) => {
                         let pk = crystals_dilithium::ml_dsa_87::PublicKey::from_bytes(&tc.pk);
                         assert_eq!(
                             pk.verify(&tc.message, &tc.signature, Some(&tc.context)),
@@ -341,7 +340,7 @@ fn acvp_sig_ver() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA87, acvp::PreHash::None) => {
+                    (acvp::ParameterSet::MLDSA87, acvp::PreHashMode::None) => {
                         let pk = crystals_dilithium::ml_dsa_87::PublicKey::from_bytes(&tc.pk);
                         assert_eq!(
                             pk.verify_internal(&tc.message, &tc.signature),
@@ -349,7 +348,7 @@ fn acvp_sig_ver() {
                             "signature mismatch"
                         );
                     }
-                    (acvp::ParameterSet::MLDSA87, acvp::PreHash::PreHash) => {
+                    (acvp::ParameterSet::MLDSA87, acvp::PreHashMode::PreHash) => {
                         let pk = crystals_dilithium::ml_dsa_87::PublicKey::from_bytes(&tc.pk);
                         assert_eq!(
                             pk.prehash_verify(&tc.message, &tc.signature, Some(&tc.context), ph),
@@ -388,7 +387,7 @@ mod acvp {
     }
 
     #[derive(Deserialize, Serialize, PartialEq)]
-    pub enum PreHash {
+    pub enum PreHashMode {
         #[serde(rename = "pure")]
         Pure,
 
@@ -452,7 +451,7 @@ mod acvp {
         pub signature_interface: SignatureInterface,
 
         #[serde(rename = "preHash")]
-        pub pre_hash: PreHash,
+        pub pre_hash: PreHashMode,
 
         #[serde(rename = "externalMu")]
         pub external_mu: bool,
@@ -508,7 +507,7 @@ mod acvp {
         pub signature_interface: SignatureInterface,
 
         #[serde(rename = "preHash")]
-        pub pre_hash: PreHash,
+        pub pre_hash: PreHashMode,
 
         #[serde(rename = "externalMu")]
         pub external_mu: bool,

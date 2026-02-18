@@ -170,7 +170,7 @@ pub fn unpack_sig(c: &mut [u8], z: &mut Polyvecl, h: &mut Polyveck, sig: &[u8]) 
             return false;
         }
         for j in k..sig[idx + params::lvl2::OMEGA + i] as usize {
-            if j > k && sig[idx + j as usize] <= sig[idx + j as usize - 1] {
+            if j > k && sig[idx + j] <= sig[idx + j - 1] {
                 return false;
             }
             h.vec[i].coeffs[sig[idx + j] as usize] = 1;
@@ -179,7 +179,7 @@ pub fn unpack_sig(c: &mut [u8], z: &mut Polyvecl, h: &mut Polyveck, sig: &[u8]) 
     }
 
     for j in k..params::lvl2::OMEGA {
-        if sig[idx + j as usize] > 0 {
+        if sig[idx + j] > 0 {
             return false;
         }
     }

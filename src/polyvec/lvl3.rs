@@ -32,6 +32,7 @@ impl Default for Polyvecl {
 }
 
 /// Implementation of ExpandA. Generates matrix A with uniformly random coefficients a_{i,j} by performing rejection sampling on the output stream of SHAKE128(rho|j|i).
+#[allow(clippy::needless_range_loop)]
 pub fn matrix_expand(mat: &mut [Polyvecl], rho: &[u8]) {
     for i in 0..K {
         for j in 0..L {
@@ -51,6 +52,7 @@ pub fn l_pointwise_acc_montgomery(w: &mut Poly, u: &Polyvecl, v: &Polyvecl) {
     }
 }
 
+#[allow(clippy::needless_range_loop)]
 pub fn matrix_pointwise_montgomery(t: &mut Polyveck, mat: &[Polyvecl], v: &Polyvecl) {
     for i in 0..K {
         l_pointwise_acc_montgomery(&mut t.vec[i], &mat[i], v);

@@ -63,6 +63,7 @@ pub fn ntt(a: &mut [i32]) {
 /// # Arguments
 ///
 /// * 'a' - input/output coefficient array of size N
+#[allow(clippy::needless_range_loop)]
 pub fn invntt_tomont(a: &mut [i32]) {
     let mut k: usize = 256;
     let mut len: usize = 1;

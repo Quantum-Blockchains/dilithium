@@ -1,7 +1,7 @@
 use sha2::{Digest as _, Sha224, Sha256, Sha384, Sha512, Sha512_224, Sha512_256};
 use sha3::{
     digest::{ExtendableOutput, Update, XofReader},
-    Digest as _, Sha3_224, Sha3_256, Sha3_384, Sha3_512, Shake128, Shake256,
+    Sha3_224, Sha3_256, Sha3_384, Sha3_512, Shake128, Shake256,
 };
 
 const OID_SHA224: &[u8] = &[
