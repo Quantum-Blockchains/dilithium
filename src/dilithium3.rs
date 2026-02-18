@@ -18,9 +18,13 @@ impl Keypair {
     ///
     /// # Arguments
     ///
-    /// * 'entropy' - optional bytes for determining the generation process
+    /// * `entropy` - optional bytes for determining the generation process
     ///
-    /// Returns an instance of Keypair
+    /// # Returns
+    /// A new [`Keypair`].
+    ///
+    /// # Errors
+    /// Returns [`crate::Error::InvalidSeedLength`] if `entropy` is provided and has an invalid length.
     pub fn generate(entropy: Option<&[u8]>) -> Result<Keypair, crate::Error> {
         let mut pk = [0u8; PUBLICKEYBYTES];
         let mut sk = [0u8; SECRETKEYBYTES];
@@ -45,9 +49,16 @@ impl Keypair {
     ///
     /// # Arguments
     ///
-    /// * 'bytes' - private and public keys bytes
+    /// * `bytes` - private and public keys bytes
     ///
-    /// Returns a Keypair
+    /// # Returns
+    /// A parsed [`Keypair`].
+    ///
+    /// # Errors
+    /// Returns [`crate::Error::InvalidKeyLength`] if `bytes` has an invalid keypair length.
+    ///
+    /// # Examples
+    /// See [`crate::dilithium2::Keypair::from_bytes`].
     pub fn from_bytes(bytes: &[u8]) -> Result<Keypair, crate::Error> {
         if bytes.len() != KEYPAIRBYTES {
             return Err(crate::Error::InvalidKeyLength {
@@ -66,7 +77,7 @@ impl Keypair {
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message to sign
+    /// * `msg` - message to sign
     ///
     /// Returns a Signature
     pub fn sign(&self, msg: &[u8]) -> Signature {
@@ -77,10 +88,13 @@ impl Keypair {
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message that is claimed to be signed
-    /// * 'sig' - signature to verify
+    /// * `msg` - message that is claimed to be signed
+    /// * `sig` - signature to verify
     ///
-    /// Returns 'true' if the verification process was successful, 'false' otherwise
+    /// Returns `true` if verification succeeds, and `false` otherwise
+    ///
+    /// # Examples
+    /// See [`crate::dilithium2::Keypair::verify`].
     pub fn verify(&self, msg: &[u8], sig: &[u8]) -> bool {
         self.public.verify(msg, sig)
     }
@@ -102,9 +116,16 @@ impl SecretKey {
     ///
     /// # Arguments
     ///
-    /// * 'bytes' - private key bytes
+    /// * `bytes` - private key bytes
     ///
-    /// Returns a SecretKey
+    /// # Returns
+    /// A parsed [`SecretKey`].
+    ///
+    /// # Errors
+    /// Returns [`crate::Error::InvalidKeyLength`] if `bytes` has an invalid secret-key length.
+    ///
+    /// # Examples
+    /// See [`crate::dilithium2::SecretKey::from_bytes`].
     pub fn from_bytes(bytes: &[u8]) -> Result<SecretKey, crate::Error> {
         let bytes = bytes
             .try_into()
@@ -120,7 +141,7 @@ impl SecretKey {
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message to sign
+    /// * `msg` - message to sign
     ///
     /// Returns a Signature
     pub fn sign(&self, msg: &[u8]) -> Signature {
@@ -144,9 +165,16 @@ impl PublicKey {
     ///
     /// # Arguments
     ///
-    /// * 'bytes' - public key bytes
+    /// * `bytes` - public key bytes
     ///
-    /// Returns a PublicKey
+    /// # Returns
+    /// A parsed [`PublicKey`].
+    ///
+    /// # Errors
+    /// Returns [`crate::Error::InvalidKeyLength`] if `bytes` has an invalid public-key length.
+    ///
+    /// # Examples
+    /// See [`crate::dilithium2::PublicKey::from_bytes`].
     pub fn from_bytes(bytes: &[u8]) -> Result<PublicKey, crate::Error> {
         let bytes = bytes
             .try_into()
@@ -162,10 +190,13 @@ impl PublicKey {
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message that is claimed to be signed
-    /// * 'sig' - signature to verify
+    /// * `msg` - message that is claimed to be signed
+    /// * `sig` - signature to verify
     ///
-    /// Returns 'true' if the verification process was successful, 'false' otherwise
+    /// Returns `true` if verification succeeds, and `false` otherwise
+    ///
+    /// # Examples
+    /// See [`crate::dilithium2::PublicKey::verify`].
     pub fn verify(&self, msg: &[u8], sig: &[u8]) -> bool {
         if sig.len() != SIGNBYTES {
             return false;

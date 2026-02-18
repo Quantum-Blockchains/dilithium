@@ -1,3 +1,13 @@
+//! High-level ML-DSA-44 API.
+//!
+//! # Modes
+//! - Pure mode: [`Keypair::sign`] / [`Keypair::verify`]
+//! - Pre-hash mode: [`Keypair::prehash_sign`] / [`Keypair::prehash_verify`]
+//! - Internal mode (`acvp-internal`): `sign_internal`, `sign_mu`,
+//!   `verify_internal`, `verify_mu`
+//!
+//! Use [`crate::RandomMode`] to control deterministic vs hedged signing.
+//!
 use crate::prehash::{prehash_bytes, PH};
 use zeroize::ZeroizeOnDrop;
 
@@ -19,9 +29,13 @@ impl Keypair {
     ///
     /// # Arguments
     ///
-    /// * 'entropy' - optional bytes for determining the generation process
+    /// * `entropy` - optional bytes for determining the generation process
     ///
-    /// Returns an instance of Keypair
+    /// # Returns
+    /// A new [`Keypair`].
+    ///
+    /// # Errors
+    /// Returns [`crate::Error::InvalidSeedLength`] if `entropy` is provided and has an invalid length.
     pub fn generate(entropy: Option<&[u8]>) -> Result<Keypair, crate::Error> {
         let mut pk = [0u8; PUBLICKEYBYTES];
         let mut sk = [0u8; SECRETKEYBYTES];
@@ -46,9 +60,25 @@ impl Keypair {
     ///
     /// # Arguments
     ///
-    /// * 'bytes' - private and public keys bytes
+    /// * `bytes` - private and public keys bytes
     ///
-    /// Returns a Keypair
+    /// # Returns
+    /// A parsed [`Keypair`].
+    ///
+    /// # Errors
+    /// Returns [`crate::Error::InvalidKeyLength`] if `bytes` has an invalid keypair length.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use crystals_dilithium::ml_dsa_44::Keypair;
+    ///
+    /// let seed = [1u8; 32];
+    /// let kp = Keypair::generate(Some(&seed)).unwrap();
+    /// let encoded = kp.to_bytes();
+    ///
+    /// let decoded = Keypair::from_bytes(&encoded).unwrap();
+    /// assert_eq!(decoded.public.to_bytes(), kp.public.to_bytes());
+    /// ```
     pub fn from_bytes(bytes: &[u8]) -> Result<Keypair, crate::Error> {
         if bytes.len() != KEYPAIRBYTES {
             return Err(crate::Error::InvalidKeyLength {
@@ -63,13 +93,15 @@ impl Keypair {
         })
     }
 
-    /// Compute a signature for a given message.
+    /// Compute a pure-mode ML-DSA signature over `msg`.
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message to sign
+    /// * `msg` - message to sign
     ///
-    /// Returns Option<Signature>
+    /// # Returns
+    /// `Some(signature)` on success, or `None` when input validation fails
+    /// (for example, if `ctx` is longer than 255 bytes).
     pub fn sign(
         &self,
         msg: &[u8],
@@ -83,21 +115,36 @@ impl Keypair {
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message that is claimed to be signed
-    /// * 'sig' - signature to verify
+    /// * `msg` - message that is claimed to be signed
+    /// * `sig` - signature to verify
     ///
-    /// Returns 'true' if the verification process was successful, 'false' otherwise
+    /// Returns `true` if verification succeeds, and `false` otherwise
+    ///
+    /// # Examples
+    /// ```rust
+    /// use crystals_dilithium::ml_dsa_44::Keypair;
+    /// use crystals_dilithium::RandomMode;
+    ///
+    /// let seed = [3u8; 32];
+    /// let msg = b"example";
+    /// let kp = Keypair::generate(Some(&seed)).unwrap();
+    ///
+    /// let sig = kp.sign(msg, None, RandomMode::Deterministic).unwrap();
+    /// assert!(kp.verify(msg, &sig, None));
+    /// ```
     pub fn verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>) -> bool {
         self.public.verify(msg, sig, ctx)
     }
 
-    /// Compute a signature for a given message.
+    /// Compute a pre-hash-mode ML-DSA signature over `msg`.
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message to sign
+    /// * `msg` - message to sign
     ///
-    /// Returns Option<Signature>
+    /// # Returns
+    /// `Some(signature)` on success, or `None` when input validation fails
+    /// (for example, if `ctx` is longer than 255 bytes).
     pub fn prehash_sign(
         &self,
         msg: &[u8],
@@ -112,10 +159,10 @@ impl Keypair {
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message that is claimed to be signed
-    /// * 'sig' - signature to verify
+    /// * `msg` - message that is claimed to be signed
+    /// * `sig` - signature to verify
     ///
-    /// Returns 'true' if the verification process was successful, 'false' otherwise
+    /// Returns `true` if verification succeeds, and `false` otherwise
     pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph: PH) -> bool {
         self.public.prehash_verify(msg, sig, ctx, ph)
     }
@@ -137,9 +184,25 @@ impl SecretKey {
     ///
     /// # Arguments
     ///
-    /// * 'bytes' - private key bytes
+    /// * `bytes` - private key bytes
     ///
-    /// Returns a SecretKey
+    /// # Returns
+    /// A parsed [`SecretKey`].
+    ///
+    /// # Errors
+    /// Returns [`crate::Error::InvalidKeyLength`] if `bytes` has an invalid secret-key length.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use crystals_dilithium::ml_dsa_44::{Keypair, SecretKey};
+    ///
+    /// let seed = [15u8; 32];
+    /// let kp = Keypair::generate(Some(&seed)).unwrap();
+    /// let encoded = kp.secret.to_bytes();
+    ///
+    /// let sk = SecretKey::from_bytes(&encoded).unwrap();
+    /// assert_eq!(sk.to_bytes(), encoded);
+    /// ```
     pub fn from_bytes(bytes: &[u8]) -> Result<SecretKey, crate::Error> {
         let bytes = bytes
             .try_into()
@@ -155,11 +218,12 @@ impl SecretKey {
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message to sign
-    /// * 'ctx' - context string
-    /// * 'hedged' - wether to use RNG or not
+    /// * `msg` - message to sign
+    /// * `ctx` - context string
+    /// * `rand` - randomness mode used for signing
     ///
-    /// Returns Option<Signature>
+    /// # Returns
+    /// `Some(signature)` on success, or `None` when input validation fails.
     pub fn sign(
         &self,
         msg: &[u8],
@@ -176,12 +240,13 @@ impl SecretKey {
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message to sign
-    /// * 'ctx' - context string
-    /// * 'hedged' - wether to use RNG or not
-    /// * 'ph' - pre-hash function
+    /// * `msg` - message to sign
+    /// * `ctx` - context string
+    /// * `rand` - randomness mode used for signing
+    /// * `ph` - pre-hash function
     ///
-    /// Returns Option<Signature>
+    /// # Returns
+    /// `Some(signature)` on success, or `None` when input validation fails.
     pub fn prehash_sign(
         &self,
         msg: &[u8],
@@ -197,6 +262,9 @@ impl SecretKey {
     }
 
     #[cfg(feature = "acvp-internal")]
+    /// Compute an internal-mode signature over already prepared input.
+    ///
+    /// This API is intended for ACVP/internal testing workflows.
     pub fn sign_internal(&self, msg: &[u8], rand: crate::RandomMode) -> Option<Signature> {
         let mut sig: Signature = [0u8; SIGNBYTES];
         crate::sign::ml_dsa_44::signature(&mut sig, msg, &self.bytes, rand);
@@ -204,6 +272,9 @@ impl SecretKey {
     }
 
     #[cfg(feature = "acvp-internal")]
+    /// Compute an internal-mode signature over a precomputed `mu` digest.
+    ///
+    /// This API is intended for ACVP/internal testing workflows.
     pub fn sign_mu(&self, mu: &[u8], rand: crate::RandomMode) -> Option<Signature> {
         let mut sig: Signature = [0u8; SIGNBYTES];
         crate::sign::ml_dsa_44::signature_mu(&mut sig, mu, &self.bytes, rand);
@@ -225,9 +296,25 @@ impl PublicKey {
     ///
     /// # Arguments
     ///
-    /// * 'bytes' - public key bytes
+    /// * `bytes` - public key bytes
     ///
-    /// Returns a PublicKey
+    /// # Returns
+    /// A parsed [`PublicKey`].
+    ///
+    /// # Errors
+    /// Returns [`crate::Error::InvalidKeyLength`] if `bytes` has an invalid public-key length.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use crystals_dilithium::ml_dsa_44::{Keypair, PublicKey};
+    ///
+    /// let seed = [5u8; 32];
+    /// let kp = Keypair::generate(Some(&seed)).unwrap();
+    /// let encoded = kp.public.to_bytes();
+    ///
+    /// let pk = PublicKey::from_bytes(&encoded).unwrap();
+    /// assert_eq!(pk.to_bytes(), encoded);
+    /// ```
     pub fn from_bytes(bytes: &[u8]) -> Result<PublicKey, crate::Error> {
         let bytes = bytes
             .try_into()
@@ -243,11 +330,24 @@ impl PublicKey {
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message that is claimed to be signed
-    /// * 'sig' - signature to verify
-    /// * 'ctx' - context string
+    /// * `msg` - message that is claimed to be signed
+    /// * `sig` - signature to verify
+    /// * `ctx` - context string
     ///
-    /// Returns 'true' if the verification process was successful, 'false' otherwise
+    /// Returns `true` if verification succeeds, and `false` otherwise
+    ///
+    /// # Examples
+    /// ```rust
+    /// use crystals_dilithium::ml_dsa_44::Keypair;
+    /// use crystals_dilithium::RandomMode;
+    ///
+    /// let seed = [8u8; 32];
+    /// let msg = b"example";
+    /// let kp = Keypair::generate(Some(&seed)).unwrap();
+    /// let sig = kp.secret.sign(msg, None, RandomMode::Deterministic).unwrap();
+    ///
+    /// assert!(kp.public.verify(msg, &sig, None));
+    /// ```
     pub fn verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>) -> bool {
         if sig.len() != SIGNBYTES {
             return false;
@@ -262,12 +362,12 @@ impl PublicKey {
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message that is claimed to be signed
-    /// * 'sig' - signature to verify
-    /// * 'ctx' - context string
-    /// * 'ph' - pre-hash function
+    /// * `msg` - message that is claimed to be signed
+    /// * `sig` - signature to verify
+    /// * `ctx` - context string
+    /// * `ph` - pre-hash function
     ///
-    /// Returns 'true' if the verification process was successful, 'false' otherwise
+    /// Returns `true` if verification succeeds, and `false` otherwise
     pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph: PH) -> bool {
         if sig.len() != SIGNBYTES {
             return false;
@@ -280,11 +380,17 @@ impl PublicKey {
     }
 
     #[cfg(feature = "acvp-internal")]
+    /// Verify an internal-mode signature over already prepared input.
+    ///
+    /// This API is intended for ACVP/internal testing workflows.
     pub fn verify_internal(&self, msg: &[u8], sig: &[u8]) -> bool {
         crate::sign::ml_dsa_44::verify(sig, msg, &self.bytes)
     }
 
     #[cfg(feature = "acvp-internal")]
+    /// Verify an internal-mode signature over a precomputed `mu` digest.
+    ///
+    /// This API is intended for ACVP/internal testing workflows.
     pub fn verify_mu(&self, mu: &[u8], sig: &[u8]) -> bool {
         crate::sign::ml_dsa_44::verify_mu(sig, mu, &self.bytes)
     }

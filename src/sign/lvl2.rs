@@ -13,8 +13,8 @@ const L: usize = params::lvl2::L;
 ///
 /// # Arguments
 ///
-/// * 'bytes' - an array to fill with random data
-/// * 'n' - number of bytes to generate
+/// * `bytes` - an array to fill with random data
+/// * `n` - number of bytes to generate
 fn random_bytes(bytes: &mut [u8], n: usize) {
     rand::prelude::thread_rng()
         .try_fill_bytes(&mut bytes[..n])
@@ -25,9 +25,13 @@ fn random_bytes(bytes: &mut [u8], n: usize) {
 ///
 /// # Arguments
 ///
-/// * 'pk' - preallocated buffer for public key
-/// * 'sk' - preallocated buffer for private key
-/// * 'seed' - optional seed; if None [random_bytes()] is used for randomness generation
+/// * `pk` - preallocated buffer for public key
+/// * `sk` - preallocated buffer for private key
+/// * `seed` - optional seed; if `None`, random bytes are generated internally
+///
+/// # Errors
+/// Returns [`crate::Error::InvalidSeedLength`] if `seed` is `Some` and its
+/// length is not `params::SEEDBYTES`.
 pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) -> Result<(), crate::Error> {
     let mut init_seed = [0u8; params::SEEDBYTES];
     match seed {
@@ -89,10 +93,10 @@ pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) -> Result<(), 
 ///
 /// # Arguments
 ///
-/// * 'sig' - preallocated with at least SIGNBYTES buffer
-/// * 'msg' - message to sign
-/// * 'sk' - private key to use
-/// * 'randomized' - indicates wether to randomize the signature or to act deterministicly
+/// * `sig` - preallocated buffer with at least `SIGNBYTES` bytes
+/// * `msg` - message to sign
+/// * `sk` - private key bytes
+/// * `randomized` - `true` for randomized signing, `false` for deterministic signing
 pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
     let mut rho = [0u8; params::SEEDBYTES];
     let mut tr = [0u8; params::SEEDBYTES];
@@ -212,11 +216,11 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], randomized: bool) {
 ///
 /// # Arguments
 ///
-/// * 'sig' - signature to verify
-/// * 'm' - message that is claimed to be signed
-/// * 'pk' - public key
+/// * `sig` - signature to verify
+/// * `msg` - message that is claimed to be signed
+/// * `pk` - public key bytes
 ///
-/// Returns 'true' if the verification process was successful, 'false' otherwise
+/// Returns `true` if verification succeeds, and `false` otherwise
 pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
     let mut buf = [0u8; K * crate::params::lvl2::POLYW1_PACKEDBYTES];
     let mut rho = [0u8; params::SEEDBYTES];

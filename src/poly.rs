@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{fips202, ntt, params, reduce, rounding};
 const N: usize = params::N as usize;
 const UNIFORM_NBLOCKS: usize = (767 + fips202::SHAKE128_RATE) / fips202::SHAKE128_RATE;

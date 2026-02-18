@@ -11,9 +11,13 @@ const L: usize = params::ml_dsa_87::L;
 ///
 /// # Arguments
 ///
-/// * 'pk' - preallocated buffer for public key
-/// * 'sk' - preallocated buffer for private key
-/// * 'seed' - optional seed; if None [random_bytes()] is used for randomness generation
+/// * `pk` - preallocated buffer for public key
+/// * `sk` - preallocated buffer for private key
+/// * `seed` - optional seed; if `None`, random bytes are generated internally
+///
+/// # Errors
+/// Returns [`crate::Error::InvalidSeedLength`] if `seed` is `Some` and its
+/// length is not `params::SEEDBYTES`.
 pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) -> Result<(), crate::Error> {
     let mut init_seed = [0u8; params::SEEDBYTES + 2];
     match seed {
@@ -84,10 +88,10 @@ pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) -> Result<(), 
 ///
 /// # Arguments
 ///
-/// * 'sig' - preallocated with at least SIGNBYTES buffer
-/// * 'msg' - message to sign
-/// * 'sk' - private key to use
-/// * 'hedged' - indicates wether to randomize the signature or to act deterministicly
+/// * `sig` - preallocated buffer with at least `SIGNBYTES` bytes
+/// * `msg` - message to sign
+/// * `sk` - private key bytes
+/// * `rnd` - randomness mode used during signing
 pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], rnd: crate::RandomMode) {
     let mut rho = [0u8; params::SEEDBYTES];
     let mut tr = [0u8; params::TR_BYTES];
@@ -118,6 +122,7 @@ pub fn signature(sig: &mut [u8], msg: &[u8], sk: &[u8], rnd: crate::RandomMode) 
     signature_core(sig, &keymu, &rho, &mut t0, &mut s1, &mut s2, rnd);
 }
 
+#[cfg(feature = "acvp-internal")]
 pub fn signature_mu(sig: &mut [u8], mu: &[u8], sk: &[u8], rnd: crate::RandomMode) {
     let mut rho = [0u8; params::SEEDBYTES];
     let mut tr = [0u8; params::TR_BYTES];
@@ -256,11 +261,11 @@ fn signature_core(
 ///
 /// # Arguments
 ///
-/// * 'sig' - signature to verify
-/// * 'm' - message that is claimed to be signed
-/// * 'pk' - public key
+/// * `sig` - signature to verify
+/// * `msg` - message that is claimed to be signed
+/// * `pk` - public key bytes
 ///
-/// Returns 'true' if the verification process was successful, 'false' otherwise
+/// Returns `true` if verification succeeds, and `false` otherwise
 pub fn verify(sig: &[u8], m: &[u8], pk: &[u8]) -> bool {
     if sig.len() != crate::params::ml_dsa_87::SIGNBYTES {
         return false;

@@ -1,19 +1,86 @@
+//! `crystals-dilithium` provides a pure Rust implementation of:
+//! - CRYSTALS-Dilithium (`dilithium2`, `dilithium3`, `dilithium5`)
+//! - ML-DSA (`ml_dsa_44`, `ml_dsa_65`, `ml_dsa_87`)
+//!
+//! # Quick Example (Dilithium2)
+//! ```rust
+//! use crystals_dilithium::dilithium2::Keypair;
+//!
+//! let seed = [42u8; 32];
+//! let msg = b"hello world";
+//!
+//! let keypair = Keypair::generate(Some(&seed)).unwrap();
+//! let sig = keypair.sign(msg);
+//! assert!(keypair.verify(msg, &sig));
+//! ```
+//!
+//! # Quick Example (ML-DSA-44)
+//! ```rust
+//! use crystals_dilithium::ml_dsa_44::Keypair;
+//! use crystals_dilithium::RandomMode;
+//!
+//! let seed = [7u8; 32];
+//! let msg = b"hello world";
+//!
+//! let keypair = Keypair::generate(Some(&seed)).unwrap();
+//! let sig = keypair
+//!     .sign(msg, None, RandomMode::Deterministic)
+//!     .unwrap();
+//! assert!(keypair.verify(msg, &sig, None));
+//! ```
+//!
+//! # Error Handling
+//! Key generation and key deserialization APIs return `Result`, so malformed
+//! external input can be handled without panics.
+//!
+//! ```rust
+//! use crystals_dilithium::dilithium2::PublicKey;
+//!
+//! let invalid = [0u8; 7];
+//! assert!(PublicKey::from_bytes(&invalid).is_err());
+//! ```
+//!
+//! # Security Notes
+//! - This crate has not undergone a formal third-party security audit.
+//! - The high-level modules (`dilithium*`, `ml_dsa_*`) are the recommended API.
+//! - Low-level signing primitives are internal by default and are only exposed
+//!   when the `acvp-internal` feature is enabled.
+//!
+//! # Module Map
+//! - `dilithium2`, `dilithium3`, `dilithium5`: high-level CRYSTALS-Dilithium APIs
+//! - `ml_dsa_44`, `ml_dsa_65`, `ml_dsa_87`: high-level ML-DSA APIs
+//! - `prehash`: pre-hash helpers for ML-DSA prehash modes
+//! - `sign` (feature `acvp-internal`): low-level signing primitives
+//!   (packed-buffer oriented)
+//!
+//! # ML-DSA Modes
+//! High-level ML-DSA modules expose three flows:
+//! - Pure mode: `sign` / `verify`
+//! - Pre-hash mode: `prehash_sign` / `prehash_verify`
+//! - Internal mode (`acvp-internal`): `sign_internal`, `verify_internal`,
+//!   `sign_mu`, `verify_mu`
+//!
+//! Signing randomness is controlled by [`RandomMode`].
+//!
 pub mod dilithium2;
 pub mod dilithium3;
 pub mod dilithium5;
-pub mod fips202;
+mod fips202;
 pub mod ml_dsa_44;
 pub mod ml_dsa_65;
 pub mod ml_dsa_87;
-pub mod ntt;
-pub mod packing;
-pub mod params;
-pub mod poly;
-pub mod polyvec;
+mod ntt;
+mod packing;
+mod params;
+mod poly;
+mod polyvec;
 pub mod prehash;
-pub mod reduce;
-pub mod rounding;
+mod reduce;
+mod rounding;
+#[cfg(feature = "acvp-internal")]
 pub mod sign;
+#[cfg(not(feature = "acvp-internal"))]
+mod sign;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
@@ -52,11 +119,13 @@ impl core::fmt::Display for Error {
 impl std::error::Error for Error {}
 
 pub enum RandomMode {
-    /// Deterministyczny podpis (ACVP: deterministic=true)
+    /// Deterministic signing (ACVP: `deterministic=true`).
     Deterministic,
-    /// Hedged – implementacja sama pobiera entropię (np. z RNG)
+    /// Hedged/randomized signing; randomness is generated internally (RNG-backed).
     Hedged,
-    /// Z góry podany strumień bajtów RNG (ACVP: pole `rnd`)
+    /// Fixed randomness stream (ACVP: `rnd` field).
+    ///
+    /// Available only with the `acvp-internal` feature.
     #[cfg(feature = "acvp-internal")]
     Fixed(Vec<u8>),
 }
