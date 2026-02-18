@@ -113,7 +113,7 @@ The same applies to:
 
 ## Testing
 ```bash
-cargo test --all-targets --all-features
+cargo test
 ```
 
 ACVP internal test vectors are feature-gated:
