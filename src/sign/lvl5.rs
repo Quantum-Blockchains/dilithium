@@ -28,10 +28,16 @@ fn random_bytes(bytes: &mut [u8], n: usize) {
 /// * 'pk' - preallocated buffer for public key
 /// * 'sk' - preallocated buffer for private key
 /// * 'seed' - optional seed; if None [random_bytes()] is used for randomness generation
-pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
+pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) -> Result<(), crate::Error> {
     let mut init_seed = [0u8; params::SEEDBYTES];
     match seed {
-        Some(x) => init_seed.copy_from_slice(x),
+        Some(x) if x.len() == params::SEEDBYTES => init_seed.copy_from_slice(x),
+        Some(x) => {
+            return Err(crate::Error::InvalidSeedLength {
+                expected: params::SEEDBYTES,
+                actual: x.len(),
+            });
+        }
         None => random_bytes(&mut init_seed, params::SEEDBYTES),
     };
 
@@ -76,6 +82,7 @@ pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
     fips202::shake256(&mut tr, params::SEEDBYTES, pk, params::lvl5::PUBLICKEYBYTES);
 
     packing::lvl5::pack_sk(sk, &rho, &tr, &key, &t0, &s1, &s2);
+    Ok(())
 }
 
 /// Compute a signature for a given message from a private (secret) key.
@@ -298,7 +305,7 @@ mod tests {
     fn self_verify_randomized() {
         let mut pk = [0u8; crate::params::lvl5::PUBLICKEYBYTES];
         let mut sk = [0u8; crate::params::lvl5::SECRETKEYBYTES];
-        super::keypair(&mut pk, &mut sk, None);
+        super::keypair(&mut pk, &mut sk, None).unwrap();
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
         super::random_bytes(&mut msg, MSG_BYTES);
@@ -310,7 +317,7 @@ mod tests {
     fn self_verify() {
         let mut pk = [0u8; crate::params::lvl5::PUBLICKEYBYTES];
         let mut sk = [0u8; crate::params::lvl5::SECRETKEYBYTES];
-        super::keypair(&mut pk, &mut sk, None);
+        super::keypair(&mut pk, &mut sk, None).unwrap();
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
         super::random_bytes(&mut msg, MSG_BYTES);
@@ -327,7 +334,7 @@ mod tests {
         ];
         let mut pk = [0u8; crate::params::lvl5::PUBLICKEYBYTES];
         let mut sk = [0u8; crate::params::lvl5::SECRETKEYBYTES];
-        super::keypair(&mut pk, &mut sk, Some(&seed));
+        super::keypair(&mut pk, &mut sk, Some(&seed)).unwrap();
 
         let test_pk: [u8; crate::params::lvl5::PUBLICKEYBYTES] = [
             0x1C, 0x0E, 0xE1, 0x11, 0x1B, 0x08, 0x00, 0x3F, 0x28, 0xE6, 0x5E, 0x8B, 0x3B, 0xDE,

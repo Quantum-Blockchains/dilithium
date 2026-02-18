@@ -27,6 +27,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all -- --check
       - run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: rustdoc warnings as errors
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
 
   test:
     runs-on: ubuntu-latest

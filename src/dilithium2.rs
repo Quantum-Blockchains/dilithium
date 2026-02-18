@@ -21,14 +21,14 @@ impl Keypair {
     /// * 'entropy' - optional bytes for determining the generation process
     ///
     /// Returns an instance of Keypair
-    pub fn generate(entropy: Option<&[u8]>) -> Keypair {
+    pub fn generate(entropy: Option<&[u8]>) -> Result<Keypair, crate::Error> {
         let mut pk = [0u8; PUBLICKEYBYTES];
         let mut sk = [0u8; SECRETKEYBYTES];
-        crate::sign::lvl2::keypair(&mut pk, &mut sk, entropy);
-        Keypair {
-            secret: SecretKey::from_bytes(&sk),
-            public: PublicKey::from_bytes(&pk),
-        }
+        crate::sign::lvl2::keypair(&mut pk, &mut sk, entropy)?;
+        Ok(Keypair {
+            secret: SecretKey::from_bytes(&sk)?,
+            public: PublicKey::from_bytes(&pk)?,
+        })
     }
 
     /// Convert a Keypair to a bytes array.
@@ -48,11 +48,18 @@ impl Keypair {
     /// * 'bytes' - private and public keys bytes
     ///
     /// Returns a Keypair
-    pub fn from_bytes(bytes: &[u8]) -> Keypair {
-        Keypair {
-            secret: SecretKey::from_bytes(&bytes[..SECRETKEYBYTES]),
-            public: PublicKey::from_bytes(&bytes[SECRETKEYBYTES..]),
+    pub fn from_bytes(bytes: &[u8]) -> Result<Keypair, crate::Error> {
+        if bytes.len() != KEYPAIRBYTES {
+            return Err(crate::Error::InvalidKeyLength {
+                kind: "dilithium2 keypair",
+                expected: KEYPAIRBYTES,
+                actual: bytes.len(),
+            });
         }
+        Ok(Keypair {
+            secret: SecretKey::from_bytes(&bytes[..SECRETKEYBYTES])?,
+            public: PublicKey::from_bytes(&bytes[SECRETKEYBYTES..])?,
+        })
     }
 
     /// Compute a signature for a given message.
@@ -98,10 +105,15 @@ impl SecretKey {
     /// * 'bytes' - private key bytes
     ///
     /// Returns a SecretKey
-    pub fn from_bytes(bytes: &[u8]) -> SecretKey {
-        SecretKey {
-            bytes: bytes.try_into().expect(""),
-        }
+    pub fn from_bytes(bytes: &[u8]) -> Result<SecretKey, crate::Error> {
+        let bytes = bytes
+            .try_into()
+            .map_err(|_| crate::Error::InvalidKeyLength {
+                kind: "dilithium2 secret key",
+                expected: SECRETKEYBYTES,
+                actual: bytes.len(),
+            })?;
+        Ok(SecretKey { bytes })
     }
 
     /// Compute a signature for a given message.
@@ -135,10 +147,15 @@ impl PublicKey {
     /// * 'bytes' - public key bytes
     ///
     /// Returns a PublicKey
-    pub fn from_bytes(bytes: &[u8]) -> PublicKey {
-        PublicKey {
-            bytes: bytes.try_into().expect(""),
-        }
+    pub fn from_bytes(bytes: &[u8]) -> Result<PublicKey, crate::Error> {
+        let bytes = bytes
+            .try_into()
+            .map_err(|_| crate::Error::InvalidKeyLength {
+                kind: "dilithium2 public key",
+                expected: PUBLICKEYBYTES,
+                actual: bytes.len(),
+            })?;
+        Ok(PublicKey { bytes })
     }
 
     /// Verify a signature for a given message with a public key.
@@ -597,7 +614,7 @@ mod tests {
             0x1A, 0xDD, 0x2F, 0xD8, 0x1A, 0x25, 0xCC, 0xB1, 0x48, 0x03, 0x2D, 0xCD, 0x73, 0x99,
             0x36, 0x73, 0x7F, 0x2D,
         ];
-        let test = super::Keypair::generate(Some(&seed));
+        let test = super::Keypair::generate(Some(&seed)).unwrap();
         assert_eq!(test.public.to_bytes(), TEST_PK);
         assert_eq!(test.secret.to_bytes(), TEST_SK);
         assert_eq!(test.sign(&TEST_MSG), TEST_SIG);
@@ -606,14 +623,14 @@ mod tests {
 
     #[test]
     fn secretkey() {
-        let test = super::SecretKey::from_bytes(&TEST_SK);
+        let test = super::SecretKey::from_bytes(&TEST_SK).unwrap();
         assert_eq!(test.to_bytes(), TEST_SK);
         assert_eq!(test.sign(&TEST_MSG), TEST_SIG);
     }
 
     #[test]
     fn publickey() {
-        let test = super::PublicKey::from_bytes(&TEST_PK);
+        let test = super::PublicKey::from_bytes(&TEST_PK).unwrap();
         assert_eq!(test.to_bytes(), TEST_PK);
         assert!(test.verify(&TEST_MSG, &TEST_SIG));
     }

@@ -14,10 +14,18 @@ const L: usize = params::ml_dsa_87::L;
 /// * 'pk' - preallocated buffer for public key
 /// * 'sk' - preallocated buffer for private key
 /// * 'seed' - optional seed; if None [random_bytes()] is used for randomness generation
-pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
+pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) -> Result<(), crate::Error> {
     let mut init_seed = [0u8; params::SEEDBYTES + 2];
     match seed {
-        Some(x) => init_seed[..params::SEEDBYTES].copy_from_slice(x),
+        Some(x) if x.len() == params::SEEDBYTES => {
+            init_seed[..params::SEEDBYTES].copy_from_slice(x)
+        }
+        Some(x) => {
+            return Err(crate::Error::InvalidSeedLength {
+                expected: params::SEEDBYTES,
+                actual: x.len(),
+            });
+        }
         None => crate::random_bytes(&mut init_seed, params::SEEDBYTES),
     };
     init_seed[params::SEEDBYTES] = K as u8;
@@ -69,6 +77,7 @@ pub fn keypair(pk: &mut [u8], sk: &mut [u8], seed: Option<&[u8]>) {
     );
 
     packing::ml_dsa_87::pack_sk(sk, &rho, &tr, &key, &t0, &s1, &s2);
+    Ok(())
 }
 
 /// Compute a signature for a given message from a private (secret) key.
@@ -352,7 +361,7 @@ mod tests {
     fn self_verify_hedged() {
         let mut pk = [0u8; crate::params::ml_dsa_87::PUBLICKEYBYTES];
         let mut sk = [0u8; crate::params::ml_dsa_87::SECRETKEYBYTES];
-        super::keypair(&mut pk, &mut sk, None);
+        super::keypair(&mut pk, &mut sk, None).unwrap();
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
@@ -364,7 +373,7 @@ mod tests {
     fn self_verify() {
         let mut pk = [0u8; crate::params::ml_dsa_87::PUBLICKEYBYTES];
         let mut sk = [0u8; crate::params::ml_dsa_87::SECRETKEYBYTES];
-        super::keypair(&mut pk, &mut sk, None);
+        super::keypair(&mut pk, &mut sk, None).unwrap();
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
@@ -377,7 +386,7 @@ mod tests {
     //        let seed: [u8; crate::params::SEEDBYTES] = [];
     //        let mut pk = [0u8; crate::params::ml_dsa_44::PUBLICKEYBYTES];
     //        let mut sk = [0u8; crate::params::ml_dsa_44::SECRETKEYBYTES];
-    //        super::keypair(&mut pk, &mut sk, Some(&seed));
+    //        super::keypair(&mut pk, &mut sk, Some(&seed)).unwrap();
     //
     //        let test_pk: [u8; crate::params::ml_dsa_44::PUBLICKEYBYTES] = [];
     //        let test_sk: [u8; crate::params::ml_dsa_44::SECRETKEYBYTES] = [];
@@ -387,7 +396,7 @@ mod tests {
     //        let seed: [u8; crate::params::SEEDBYTES] = [];
     //        let mut pk = [0u8; crate::params::ml_dsa_87::PUBLICKEYBYTES];
     //        let mut sk = [0u8; crate::params::ml_dsa_87::SECRETKEYBYTES];
-    //        super::keypair(&mut pk, &mut sk, Some(&seed));
+    //        super::keypair(&mut pk, &mut sk, Some(&seed)).unwrap();
     //
     //        let test_pk: [u8; crate::params::ml_dsa_87::PUBLICKEYBYTES] = [];
     //        let test_sk: [u8; crate::params::ml_dsa_87::SECRETKEYBYTES] = [];

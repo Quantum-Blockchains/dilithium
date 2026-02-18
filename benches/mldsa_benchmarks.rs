@@ -18,12 +18,12 @@ mod mldsa_benches {
         let mut s = [0u8; 32];
         random_bytes(&mut s, 32);
         c.bench_function("ML-DSA keypair generation", move |b| {
-            b.iter(|| Keypair::generate(None));
+            b.iter(|| Keypair::generate(None).unwrap());
         });
     }
 
     fn sign(c: &mut Criterion) {
-        let keypair = Keypair::generate(None);
+        let keypair = Keypair::generate(None).unwrap();
         let mut msg = [0u8; 32];
         let mut ctx = [0u8; 32];
         random_bytes(&mut msg, 32);
@@ -41,7 +41,7 @@ mod mldsa_benches {
     }
 
     fn verify(c: &mut Criterion) {
-        let keypair = Keypair::generate(None);
+        let keypair = Keypair::generate(None).unwrap();
         let mut msg = [0u8; 32];
         let mut ctx = [0u8; 32];
         random_bytes(&mut msg, 32);

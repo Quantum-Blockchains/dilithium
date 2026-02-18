@@ -15,6 +15,42 @@ pub mod reduce;
 pub mod rounding;
 pub mod sign;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Error {
+    InvalidSeedLength {
+        expected: usize,
+        actual: usize,
+    },
+    InvalidKeyLength {
+        kind: &'static str,
+        expected: usize,
+        actual: usize,
+    },
+}
+
+impl core::fmt::Display for Error {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Error::InvalidSeedLength { expected, actual } => {
+                write!(
+                    f,
+                    "invalid seed length: expected {expected} bytes, got {actual}"
+                )
+            }
+            Error::InvalidKeyLength {
+                kind,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "invalid {kind} length: expected {expected} bytes, got {actual}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
 pub enum RandomMode {
     /// Deterministyczny podpis (ACVP: deterministic=true)
     Deterministic,

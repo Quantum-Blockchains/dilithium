@@ -15,7 +15,8 @@ fn acvp_key_gen() {
         for tc in tg.tests {
             match tg.parameter_set {
                 acvp::ParameterSet::MLDSA44 => {
-                    let kp = crystals_dilithium::ml_dsa_44::Keypair::generate(Some(&tc.seed));
+                    let kp =
+                        crystals_dilithium::ml_dsa_44::Keypair::generate(Some(&tc.seed)).unwrap();
                     assert_eq!(
                         kp.secret.to_bytes(),
                         tc.sk.as_slice(),
@@ -28,7 +29,8 @@ fn acvp_key_gen() {
                     );
                 }
                 acvp::ParameterSet::MLDSA65 => {
-                    let kp = crystals_dilithium::ml_dsa_65::Keypair::generate(Some(&tc.seed));
+                    let kp =
+                        crystals_dilithium::ml_dsa_65::Keypair::generate(Some(&tc.seed)).unwrap();
                     assert_eq!(
                         kp.secret.to_bytes(),
                         tc.sk.as_slice(),
@@ -41,7 +43,8 @@ fn acvp_key_gen() {
                     );
                 }
                 acvp::ParameterSet::MLDSA87 => {
-                    let kp = crystals_dilithium::ml_dsa_87::Keypair::generate(Some(&tc.seed));
+                    let kp =
+                        crystals_dilithium::ml_dsa_87::Keypair::generate(Some(&tc.seed)).unwrap();
                     assert_eq!(
                         kp.secret.to_bytes(),
                         tc.sk.as_slice(),
@@ -100,7 +103,8 @@ fn acvp_sig_gen() {
             if tg.external_mu {
                 match &tg.parameter_set {
                     acvp::ParameterSet::MLDSA44 => {
-                        let sk = crystals_dilithium::ml_dsa_44::SecretKey::from_bytes(&tc.sk);
+                        let sk =
+                            crystals_dilithium::ml_dsa_44::SecretKey::from_bytes(&tc.sk).unwrap();
                         let sig = sk.sign_mu(&tc.mu, rand).unwrap();
                         assert_eq!(
                             sig.as_slice(),
@@ -109,7 +113,8 @@ fn acvp_sig_gen() {
                         );
                     }
                     acvp::ParameterSet::MLDSA65 => {
-                        let sk = crystals_dilithium::ml_dsa_65::SecretKey::from_bytes(&tc.sk);
+                        let sk =
+                            crystals_dilithium::ml_dsa_65::SecretKey::from_bytes(&tc.sk).unwrap();
                         let sig = sk.sign_mu(&tc.mu, rand).unwrap();
                         assert_eq!(
                             sig.as_slice(),
@@ -118,7 +123,8 @@ fn acvp_sig_gen() {
                         );
                     }
                     acvp::ParameterSet::MLDSA87 => {
-                        let sk = crystals_dilithium::ml_dsa_87::SecretKey::from_bytes(&tc.sk);
+                        let sk =
+                            crystals_dilithium::ml_dsa_87::SecretKey::from_bytes(&tc.sk).unwrap();
                         let sig = sk.sign_mu(&tc.mu, rand).unwrap();
                         assert_eq!(
                             sig.as_slice(),
@@ -130,7 +136,8 @@ fn acvp_sig_gen() {
             } else {
                 match (&tg.parameter_set, &tg.pre_hash) {
                     (acvp::ParameterSet::MLDSA44, acvp::PreHashMode::Pure) => {
-                        let sk = crystals_dilithium::ml_dsa_44::SecretKey::from_bytes(&tc.sk);
+                        let sk =
+                            crystals_dilithium::ml_dsa_44::SecretKey::from_bytes(&tc.sk).unwrap();
                         let sig = sk.sign(&tc.message, Some(&tc.context), rand).unwrap();
                         assert_eq!(
                             sig.as_slice(),
@@ -139,7 +146,8 @@ fn acvp_sig_gen() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA44, acvp::PreHashMode::None) => {
-                        let sk = crystals_dilithium::ml_dsa_44::SecretKey::from_bytes(&tc.sk);
+                        let sk =
+                            crystals_dilithium::ml_dsa_44::SecretKey::from_bytes(&tc.sk).unwrap();
                         let sig = sk.sign_internal(&tc.message, rand).unwrap();
                         assert_eq!(
                             sig.as_slice(),
@@ -148,7 +156,8 @@ fn acvp_sig_gen() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA44, acvp::PreHashMode::PreHash) => {
-                        let sk = crystals_dilithium::ml_dsa_44::SecretKey::from_bytes(&tc.sk);
+                        let sk =
+                            crystals_dilithium::ml_dsa_44::SecretKey::from_bytes(&tc.sk).unwrap();
                         let sig = sk
                             .prehash_sign(&tc.message, Some(&tc.context), rand, ph)
                             .unwrap();
@@ -159,7 +168,8 @@ fn acvp_sig_gen() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA65, acvp::PreHashMode::Pure) => {
-                        let sk = crystals_dilithium::ml_dsa_65::SecretKey::from_bytes(&tc.sk);
+                        let sk =
+                            crystals_dilithium::ml_dsa_65::SecretKey::from_bytes(&tc.sk).unwrap();
                         let sig = sk.sign(&tc.message, Some(&tc.context), rand).unwrap();
                         assert_eq!(
                             sig.as_slice(),
@@ -168,7 +178,8 @@ fn acvp_sig_gen() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA65, acvp::PreHashMode::None) => {
-                        let sk = crystals_dilithium::ml_dsa_65::SecretKey::from_bytes(&tc.sk);
+                        let sk =
+                            crystals_dilithium::ml_dsa_65::SecretKey::from_bytes(&tc.sk).unwrap();
                         let sig = sk.sign_internal(&tc.message, rand).unwrap();
                         assert_eq!(
                             sig.as_slice(),
@@ -177,7 +188,8 @@ fn acvp_sig_gen() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA65, acvp::PreHashMode::PreHash) => {
-                        let sk = crystals_dilithium::ml_dsa_65::SecretKey::from_bytes(&tc.sk);
+                        let sk =
+                            crystals_dilithium::ml_dsa_65::SecretKey::from_bytes(&tc.sk).unwrap();
                         let sig = sk
                             .prehash_sign(&tc.message, Some(&tc.context), rand, ph)
                             .unwrap();
@@ -188,7 +200,8 @@ fn acvp_sig_gen() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA87, acvp::PreHashMode::Pure) => {
-                        let sk = crystals_dilithium::ml_dsa_87::SecretKey::from_bytes(&tc.sk);
+                        let sk =
+                            crystals_dilithium::ml_dsa_87::SecretKey::from_bytes(&tc.sk).unwrap();
                         let sig = sk.sign(&tc.message, Some(&tc.context), rand).unwrap();
                         assert_eq!(
                             sig.as_slice(),
@@ -197,7 +210,8 @@ fn acvp_sig_gen() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA87, acvp::PreHashMode::None) => {
-                        let sk = crystals_dilithium::ml_dsa_87::SecretKey::from_bytes(&tc.sk);
+                        let sk =
+                            crystals_dilithium::ml_dsa_87::SecretKey::from_bytes(&tc.sk).unwrap();
                         let sig = sk.sign_internal(&tc.message, rand).unwrap();
                         assert_eq!(
                             sig.as_slice(),
@@ -206,7 +220,8 @@ fn acvp_sig_gen() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA87, acvp::PreHashMode::PreHash) => {
-                        let sk = crystals_dilithium::ml_dsa_87::SecretKey::from_bytes(&tc.sk);
+                        let sk =
+                            crystals_dilithium::ml_dsa_87::SecretKey::from_bytes(&tc.sk).unwrap();
                         let sig = sk
                             .prehash_sign(&tc.message, Some(&tc.context), rand, ph)
                             .unwrap();
@@ -258,7 +273,8 @@ fn acvp_sig_ver() {
             if tg.external_mu {
                 match &tg.parameter_set {
                     acvp::ParameterSet::MLDSA44 => {
-                        let pk = crystals_dilithium::ml_dsa_44::PublicKey::from_bytes(&tc.pk);
+                        let pk =
+                            crystals_dilithium::ml_dsa_44::PublicKey::from_bytes(&tc.pk).unwrap();
                         assert_eq!(
                             pk.verify_mu(&tc.mu, &tc.signature),
                             tc.test_passed,
@@ -266,7 +282,8 @@ fn acvp_sig_ver() {
                         );
                     }
                     acvp::ParameterSet::MLDSA65 => {
-                        let pk = crystals_dilithium::ml_dsa_65::PublicKey::from_bytes(&tc.pk);
+                        let pk =
+                            crystals_dilithium::ml_dsa_65::PublicKey::from_bytes(&tc.pk).unwrap();
                         assert_eq!(
                             pk.verify_mu(&tc.mu, &tc.signature),
                             tc.test_passed,
@@ -274,7 +291,8 @@ fn acvp_sig_ver() {
                         );
                     }
                     acvp::ParameterSet::MLDSA87 => {
-                        let pk = crystals_dilithium::ml_dsa_87::PublicKey::from_bytes(&tc.pk);
+                        let pk =
+                            crystals_dilithium::ml_dsa_87::PublicKey::from_bytes(&tc.pk).unwrap();
                         assert_eq!(
                             pk.verify_mu(&tc.mu, &tc.signature),
                             tc.test_passed,
@@ -285,7 +303,8 @@ fn acvp_sig_ver() {
             } else {
                 match (&tg.parameter_set, &tg.pre_hash) {
                     (acvp::ParameterSet::MLDSA44, acvp::PreHashMode::Pure) => {
-                        let pk = crystals_dilithium::ml_dsa_44::PublicKey::from_bytes(&tc.pk);
+                        let pk =
+                            crystals_dilithium::ml_dsa_44::PublicKey::from_bytes(&tc.pk).unwrap();
                         assert_eq!(
                             pk.verify(&tc.message, &tc.signature, Some(&tc.context)),
                             tc.test_passed,
@@ -293,7 +312,8 @@ fn acvp_sig_ver() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA44, acvp::PreHashMode::None) => {
-                        let pk = crystals_dilithium::ml_dsa_44::PublicKey::from_bytes(&tc.pk);
+                        let pk =
+                            crystals_dilithium::ml_dsa_44::PublicKey::from_bytes(&tc.pk).unwrap();
                         assert_eq!(
                             pk.verify_internal(&tc.message, &tc.signature),
                             tc.test_passed,
@@ -301,7 +321,8 @@ fn acvp_sig_ver() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA44, acvp::PreHashMode::PreHash) => {
-                        let pk = crystals_dilithium::ml_dsa_44::PublicKey::from_bytes(&tc.pk);
+                        let pk =
+                            crystals_dilithium::ml_dsa_44::PublicKey::from_bytes(&tc.pk).unwrap();
                         assert_eq!(
                             pk.prehash_verify(&tc.message, &tc.signature, Some(&tc.context), ph),
                             tc.test_passed,
@@ -309,7 +330,8 @@ fn acvp_sig_ver() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA65, acvp::PreHashMode::Pure) => {
-                        let pk = crystals_dilithium::ml_dsa_65::PublicKey::from_bytes(&tc.pk);
+                        let pk =
+                            crystals_dilithium::ml_dsa_65::PublicKey::from_bytes(&tc.pk).unwrap();
                         assert_eq!(
                             pk.verify(&tc.message, &tc.signature, Some(&tc.context)),
                             tc.test_passed,
@@ -317,7 +339,8 @@ fn acvp_sig_ver() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA65, acvp::PreHashMode::None) => {
-                        let pk = crystals_dilithium::ml_dsa_65::PublicKey::from_bytes(&tc.pk);
+                        let pk =
+                            crystals_dilithium::ml_dsa_65::PublicKey::from_bytes(&tc.pk).unwrap();
                         assert_eq!(
                             pk.verify_internal(&tc.message, &tc.signature),
                             tc.test_passed,
@@ -325,7 +348,8 @@ fn acvp_sig_ver() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA65, acvp::PreHashMode::PreHash) => {
-                        let pk = crystals_dilithium::ml_dsa_65::PublicKey::from_bytes(&tc.pk);
+                        let pk =
+                            crystals_dilithium::ml_dsa_65::PublicKey::from_bytes(&tc.pk).unwrap();
                         assert_eq!(
                             pk.prehash_verify(&tc.message, &tc.signature, Some(&tc.context), ph),
                             tc.test_passed,
@@ -333,7 +357,8 @@ fn acvp_sig_ver() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA87, acvp::PreHashMode::Pure) => {
-                        let pk = crystals_dilithium::ml_dsa_87::PublicKey::from_bytes(&tc.pk);
+                        let pk =
+                            crystals_dilithium::ml_dsa_87::PublicKey::from_bytes(&tc.pk).unwrap();
                         assert_eq!(
                             pk.verify(&tc.message, &tc.signature, Some(&tc.context)),
                             tc.test_passed,
@@ -341,7 +366,8 @@ fn acvp_sig_ver() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA87, acvp::PreHashMode::None) => {
-                        let pk = crystals_dilithium::ml_dsa_87::PublicKey::from_bytes(&tc.pk);
+                        let pk =
+                            crystals_dilithium::ml_dsa_87::PublicKey::from_bytes(&tc.pk).unwrap();
                         assert_eq!(
                             pk.verify_internal(&tc.message, &tc.signature),
                             tc.test_passed,
@@ -349,7 +375,8 @@ fn acvp_sig_ver() {
                         );
                     }
                     (acvp::ParameterSet::MLDSA87, acvp::PreHashMode::PreHash) => {
-                        let pk = crystals_dilithium::ml_dsa_87::PublicKey::from_bytes(&tc.pk);
+                        let pk =
+                            crystals_dilithium::ml_dsa_87::PublicKey::from_bytes(&tc.pk).unwrap();
                         assert_eq!(
                             pk.prehash_verify(&tc.message, &tc.signature, Some(&tc.context), ph),
                             tc.test_passed,

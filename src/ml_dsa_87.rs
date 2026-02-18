@@ -22,14 +22,14 @@ impl Keypair {
     /// * 'entropy' - optional bytes for determining the generation process
     ///
     /// Returns an instance of Keypair
-    pub fn generate(entropy: Option<&[u8]>) -> Keypair {
+    pub fn generate(entropy: Option<&[u8]>) -> Result<Keypair, crate::Error> {
         let mut pk = [0u8; PUBLICKEYBYTES];
         let mut sk = [0u8; SECRETKEYBYTES];
-        crate::sign::ml_dsa_87::keypair(&mut pk, &mut sk, entropy);
-        Keypair {
-            secret: SecretKey::from_bytes(&sk),
-            public: PublicKey::from_bytes(&pk),
-        }
+        crate::sign::ml_dsa_87::keypair(&mut pk, &mut sk, entropy)?;
+        Ok(Keypair {
+            secret: SecretKey::from_bytes(&sk)?,
+            public: PublicKey::from_bytes(&pk)?,
+        })
     }
 
     /// Convert a Keypair to a bytes array.
@@ -49,11 +49,18 @@ impl Keypair {
     /// * 'bytes' - private and public keys bytes
     ///
     /// Returns a Keypair
-    pub fn from_bytes(bytes: &[u8]) -> Keypair {
-        Keypair {
-            secret: SecretKey::from_bytes(&bytes[..SECRETKEYBYTES]),
-            public: PublicKey::from_bytes(&bytes[SECRETKEYBYTES..]),
+    pub fn from_bytes(bytes: &[u8]) -> Result<Keypair, crate::Error> {
+        if bytes.len() != KEYPAIRBYTES {
+            return Err(crate::Error::InvalidKeyLength {
+                kind: "ml_dsa_87 keypair",
+                expected: KEYPAIRBYTES,
+                actual: bytes.len(),
+            });
         }
+        Ok(Keypair {
+            secret: SecretKey::from_bytes(&bytes[..SECRETKEYBYTES])?,
+            public: PublicKey::from_bytes(&bytes[SECRETKEYBYTES..])?,
+        })
     }
 
     /// Compute a signature for a given message.
@@ -133,10 +140,15 @@ impl SecretKey {
     /// * 'bytes' - private key bytes
     ///
     /// Returns a SecretKey
-    pub fn from_bytes(bytes: &[u8]) -> SecretKey {
-        SecretKey {
-            bytes: bytes.try_into().expect(""),
-        }
+    pub fn from_bytes(bytes: &[u8]) -> Result<SecretKey, crate::Error> {
+        let bytes = bytes
+            .try_into()
+            .map_err(|_| crate::Error::InvalidKeyLength {
+                kind: "ml_dsa_87 secret key",
+                expected: SECRETKEYBYTES,
+                actual: bytes.len(),
+            })?;
+        Ok(SecretKey { bytes })
     }
 
     /// Compute a signature for a given message.
@@ -154,10 +166,9 @@ impl SecretKey {
         ctx: Option<&[u8]>,
         rand: crate::RandomMode,
     ) -> Option<Signature> {
-        let m = crate::build_mprime(msg, ctx, false);
-        m.as_ref()?;
+        let m = crate::build_mprime(msg, ctx, false)?;
         let mut sig: Signature = [0u8; SIGNBYTES];
-        crate::sign::ml_dsa_87::signature(&mut sig, m.unwrap().as_slice(), &self.bytes, rand);
+        crate::sign::ml_dsa_87::signature(&mut sig, m.as_slice(), &self.bytes, rand);
         Some(sig)
     }
 
@@ -179,10 +190,9 @@ impl SecretKey {
         ph: PH,
     ) -> Option<Signature> {
         let phm = prehash_bytes(ph, msg);
-        let m = crate::build_mprime(phm.as_slice(), ctx, true);
-        m.as_ref()?;
+        let m = crate::build_mprime(phm.as_slice(), ctx, true)?;
         let mut sig: Signature = [0u8; SIGNBYTES];
-        crate::sign::ml_dsa_87::signature(&mut sig, m.unwrap().as_slice(), &self.bytes, rand);
+        crate::sign::ml_dsa_87::signature(&mut sig, m.as_slice(), &self.bytes, rand);
         Some(sig)
     }
 
@@ -218,10 +228,15 @@ impl PublicKey {
     /// * 'bytes' - public key bytes
     ///
     /// Returns a PublicKey
-    pub fn from_bytes(bytes: &[u8]) -> PublicKey {
-        PublicKey {
-            bytes: bytes.try_into().expect(""),
-        }
+    pub fn from_bytes(bytes: &[u8]) -> Result<PublicKey, crate::Error> {
+        let bytes = bytes
+            .try_into()
+            .map_err(|_| crate::Error::InvalidKeyLength {
+                kind: "ml_dsa_87 public key",
+                expected: PUBLICKEYBYTES,
+                actual: bytes.len(),
+            })?;
+        Ok(PublicKey { bytes })
     }
 
     /// Verify a signature for a given message with a public key.
@@ -237,11 +252,10 @@ impl PublicKey {
         if sig.len() != SIGNBYTES {
             return false;
         }
-        let m = crate::build_mprime(msg, ctx, false);
-        if m.is_none() {
+        let Some(m) = crate::build_mprime(msg, ctx, false) else {
             return false;
-        }
-        crate::sign::ml_dsa_87::verify(sig, m.unwrap().as_slice(), &self.bytes)
+        };
+        crate::sign::ml_dsa_87::verify(sig, m.as_slice(), &self.bytes)
     }
 
     /// Verify a signature for a given message with a public key.
@@ -259,11 +273,10 @@ impl PublicKey {
             return false;
         }
         let phm = prehash_bytes(ph, msg);
-        let m = crate::build_mprime(&phm, ctx, true);
-        if m.is_none() {
+        let Some(m) = crate::build_mprime(&phm, ctx, true) else {
             return false;
-        }
-        crate::sign::ml_dsa_87::verify(sig, m.unwrap().as_slice(), &self.bytes)
+        };
+        crate::sign::ml_dsa_87::verify(sig, m.as_slice(), &self.bytes)
     }
 
     #[cfg(feature = "acvp-internal")]
@@ -286,7 +299,7 @@ mod tests {
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
-        let keys = Keypair::generate(None);
+        let keys = Keypair::generate(None).unwrap();
         let sig = keys.sign(&msg, None, crate::RandomMode::Hedged);
         assert!(keys.verify(&msg, &sig.unwrap(), None));
     }
@@ -295,7 +308,7 @@ mod tests {
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
-        let keys = Keypair::generate(None);
+        let keys = Keypair::generate(None).unwrap();
         let sig = keys.sign(&msg, None, crate::RandomMode::Deterministic);
         assert!(keys.verify(&msg, &sig.unwrap(), None));
     }
@@ -304,7 +317,7 @@ mod tests {
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
-        let keys = Keypair::generate(None);
+        let keys = Keypair::generate(None).unwrap();
         let sig = keys.prehash_sign(&msg, None, crate::RandomMode::Hedged, PH::SHA256);
         assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, PH::SHA256));
     }
@@ -313,7 +326,7 @@ mod tests {
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
-        let keys = Keypair::generate(None);
+        let keys = Keypair::generate(None).unwrap();
         let sig = keys.prehash_sign(&msg, None, crate::RandomMode::Deterministic, PH::SHA256);
         assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, PH::SHA256));
     }
