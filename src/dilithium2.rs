@@ -1,3 +1,5 @@
+use zeroize::ZeroizeOnDrop;
+
 pub const SECRETKEYBYTES: usize = crate::params::lvl2::SECRETKEYBYTES;
 pub const PUBLICKEYBYTES: usize = crate::params::lvl2::PUBLICKEYBYTES;
 pub const SIGNBYTES: usize = crate::params::lvl2::SIGNBYTES;
@@ -78,8 +80,9 @@ impl Keypair {
 }
 
 /// Private key.
+#[derive(ZeroizeOnDrop)]
 pub struct SecretKey {
-    pub bytes: [u8; SECRETKEYBYTES],
+    bytes: [u8; SECRETKEYBYTES],
 }
 
 impl SecretKey {
@@ -116,7 +119,7 @@ impl SecretKey {
 }
 
 pub struct PublicKey {
-    pub bytes: [u8; PUBLICKEYBYTES],
+    bytes: [u8; PUBLICKEYBYTES],
 }
 
 impl PublicKey {

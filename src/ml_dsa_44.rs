@@ -1,4 +1,5 @@
 use crate::prehash::{prehash_bytes, PH};
+use zeroize::ZeroizeOnDrop;
 
 pub const SECRETKEYBYTES: usize = crate::params::ml_dsa_44::SECRETKEYBYTES;
 pub const PUBLICKEYBYTES: usize = crate::params::ml_dsa_44::PUBLICKEYBYTES;
@@ -114,8 +115,9 @@ impl Keypair {
 }
 
 /// Private key.
+#[derive(ZeroizeOnDrop)]
 pub struct SecretKey {
-    pub bytes: [u8; SECRETKEYBYTES],
+    bytes: [u8; SECRETKEYBYTES],
 }
 
 impl SecretKey {
@@ -200,7 +202,7 @@ impl SecretKey {
 }
 
 pub struct PublicKey {
-    pub bytes: [u8; PUBLICKEYBYTES],
+    bytes: [u8; PUBLICKEYBYTES],
 }
 
 impl PublicKey {
