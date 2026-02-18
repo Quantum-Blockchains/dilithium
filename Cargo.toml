@@ -9,7 +9,7 @@ readme = "README.md"
 homepage = "https://www.quantumblockchains.io/"
 repository = "https://github.com/Quantum-Blockchains/dilithium"
 keywords = ["cryptography", "post-quantum", "dilithium", "ml-dsa", "fips-204"]
-categories = ["cryptography", "post-quantum-cryptography"]
+categories = ["cryptography", "pqc"]
 exclude = [
   "tests/json-files/**",
   ".github/**",
