@@ -1,4 +1,6 @@
 [graph]
+
+[bans]
 # Lint level for when multiple versions of the same crate are detected.
 multiple-versions = "warn"
 
