@@ -1,0 +1,28 @@
+[graph]
+# Lint level for when multiple versions of the same crate are detected.
+multiple-versions = "warn"
+
+[advisories]
+# Use the RustSec advisory database.
+db-urls = ["https://github.com/rustsec/advisory-db"]
+
+[licenses]
+# Keep this permissive at start; tighten later if needed.
+confidence-threshold = 0.8
+allow = [
+  "GPL-3.0",
+  "MIT",
+  "Apache-2.0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Zlib",
+  "MPL-2.0",
+]
+
+[sources]
+# Allow only crates.io by default.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
