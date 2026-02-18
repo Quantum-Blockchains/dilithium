@@ -1,33 +1,42 @@
-use crate::{params, poly, polyvec::lvl3::{Polyveck, Polyvecl}};
+use crate::{
+    params, poly,
+    polyvec::lvl3::{Polyveck, Polyvecl},
+};
 const K: usize = params::lvl3::K;
 const L: usize = params::lvl3::L;
 const N: usize = params::N as usize;
 
 /// Bit-pack public key pk = (rho, t1).
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * 'pk' - output for public key value
 /// * 'rho' - const reference to rho of params::SEEDBYTES length
 /// * 't1' - const reference to t1
 pub fn pack_pk(pk: &mut [u8], rho: &[u8], t1: &Polyveck) {
     pk[..params::SEEDBYTES].copy_from_slice(&rho[..params::SEEDBYTES]);
     for i in 0..K {
-        poly::t1_pack(&mut pk[params::SEEDBYTES + i * params::POLYT1_PACKEDBYTES..], &t1.vec[i]);
+        poly::t1_pack(
+            &mut pk[params::SEEDBYTES + i * params::POLYT1_PACKEDBYTES..],
+            &t1.vec[i],
+        );
     }
 }
 
 /// Unpack public key pk = (rho, t1).
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * 'rho' - output for rho value of params::SEEDBYTES length
 /// * 't1' - output for t1 value
 /// * 'pk' - const reference to public key
 pub fn unpack_pk(rho: &mut [u8], t1: &mut Polyveck, pk: &[u8]) {
     rho[..params::SEEDBYTES].copy_from_slice(&pk[..params::SEEDBYTES]);
     for i in 0..K {
-        poly::t1_unpack(&mut t1.vec[i], &pk[params::SEEDBYTES + i * params::POLYT1_PACKEDBYTES..]);
+        poly::t1_unpack(
+            &mut t1.vec[i],
+            &pk[params::SEEDBYTES + i * params::POLYT1_PACKEDBYTES..],
+        );
     }
 }
 
@@ -39,7 +48,7 @@ pub fn pack_sk(
     key: &[u8],
     t0: &Polyveck,
     s1: &Polyvecl,
-    s2: &Polyveck
+    s2: &Polyveck,
 ) {
     sk[..params::SEEDBYTES].copy_from_slice(&rho[0..params::SEEDBYTES]);
     let mut idx = params::SEEDBYTES;
@@ -51,12 +60,18 @@ pub fn pack_sk(
     idx += params::SEEDBYTES;
 
     for i in 0..L {
-        poly::lvl3::eta_pack(&mut sk[idx + i * params::lvl3::POLYETA_PACKEDBYTES..], &s1.vec[i]);
+        poly::lvl3::eta_pack(
+            &mut sk[idx + i * params::lvl3::POLYETA_PACKEDBYTES..],
+            &s1.vec[i],
+        );
     }
     idx += L * params::lvl3::POLYETA_PACKEDBYTES;
 
     for i in 0..K {
-        poly::lvl3::eta_pack(&mut sk[idx + i * params::lvl3::POLYETA_PACKEDBYTES..], &s2.vec[i]);
+        poly::lvl3::eta_pack(
+            &mut sk[idx + i * params::lvl3::POLYETA_PACKEDBYTES..],
+            &s2.vec[i],
+        );
     }
     idx += K * params::lvl3::POLYETA_PACKEDBYTES;
 
@@ -73,7 +88,7 @@ pub fn unpack_sk(
     t0: &mut Polyveck,
     s1: &mut Polyvecl,
     s2: &mut Polyveck,
-    sk: &[u8]
+    sk: &[u8],
 ) {
     rho[..params::SEEDBYTES].copy_from_slice(&sk[..params::SEEDBYTES]);
     let mut idx = params::SEEDBYTES;
@@ -85,12 +100,18 @@ pub fn unpack_sk(
     idx += params::SEEDBYTES;
 
     for i in 0..L {
-        poly::lvl3::eta_unpack(&mut s1.vec[i], &sk[idx + i * params::lvl3::POLYETA_PACKEDBYTES..]);
+        poly::lvl3::eta_unpack(
+            &mut s1.vec[i],
+            &sk[idx + i * params::lvl3::POLYETA_PACKEDBYTES..],
+        );
     }
     idx += L * params::lvl3::POLYETA_PACKEDBYTES;
 
     for i in 0..K {
-        poly::lvl3::eta_unpack(&mut s2.vec[i], &sk[idx + i * params::lvl3::POLYETA_PACKEDBYTES..]);
+        poly::lvl3::eta_unpack(
+            &mut s2.vec[i],
+            &sk[idx + i * params::lvl3::POLYETA_PACKEDBYTES..],
+        );
     }
     idx += K * params::lvl3::POLYETA_PACKEDBYTES;
 
@@ -107,7 +128,10 @@ pub fn pack_sig(sig: &mut [u8], c: Option<&[u8]>, z: &Polyvecl, h: &Polyveck) {
 
     let mut idx = params::SEEDBYTES;
     for i in 0..L {
-        poly::lvl3::z_pack(&mut sig[idx + i * params::lvl3::POLYZ_PACKEDBYTES..], &z.vec[i]);
+        poly::lvl3::z_pack(
+            &mut sig[idx + i * params::lvl3::POLYZ_PACKEDBYTES..],
+            &z.vec[i],
+        );
     }
 
     idx += L * params::lvl3::POLYZ_PACKEDBYTES;
@@ -116,37 +140,37 @@ pub fn pack_sig(sig: &mut [u8], c: Option<&[u8]>, z: &Polyvecl, h: &Polyveck) {
     let mut k = 0;
     for i in 0..K {
         for j in 0..N {
-        if h.vec[i].coeffs[j] != 0 {
-            sig[idx + k] = j as u8;
-            k += 1;
-        }
+            if h.vec[i].coeffs[j] != 0 {
+                sig[idx + k] = j as u8;
+                k += 1;
+            }
         }
         sig[idx + params::lvl3::OMEGA + i] = k as u8;
     }
 }
 
 /// Unpack signature sig = (z, h, c).
-pub fn unpack_sig(
-    c: &mut [u8],
-    z: &mut Polyvecl,
-    h: &mut Polyveck,
-    sig: &[u8],
-) -> bool {
+pub fn unpack_sig(c: &mut [u8], z: &mut Polyvecl, h: &mut Polyveck, sig: &[u8]) -> bool {
     c[..params::SEEDBYTES].copy_from_slice(&sig[..params::SEEDBYTES]);
-    
+
     let mut idx = params::SEEDBYTES;
     for i in 0..L {
-        poly::lvl3::z_unpack(&mut z.vec[i], &sig[idx + i * params::lvl3::POLYZ_PACKEDBYTES..]);
+        poly::lvl3::z_unpack(
+            &mut z.vec[i],
+            &sig[idx + i * params::lvl3::POLYZ_PACKEDBYTES..],
+        );
     }
     idx += L * params::lvl3::POLYZ_PACKEDBYTES;
 
     let mut k: usize = 0;
     for i in 0..K {
-        if sig[idx + params::lvl3::OMEGA + i] < k as u8 || sig[idx + params::lvl3::OMEGA + i] > params::lvl3::OMEGA as u8 {
+        if sig[idx + params::lvl3::OMEGA + i] < k as u8
+            || sig[idx + params::lvl3::OMEGA + i] > params::lvl3::OMEGA as u8
+        {
             return false;
         }
         for j in k..sig[idx + params::lvl3::OMEGA + i] as usize {
-            if j > k && sig[idx + j as usize] <= sig[idx + j as usize - 1] {
+            if j > k && sig[idx + j] <= sig[idx + j - 1] {
                 return false;
             }
             h.vec[i].coeffs[sig[idx + j] as usize] = 1;
@@ -155,7 +179,7 @@ pub fn unpack_sig(
     }
 
     for j in k..params::lvl3::OMEGA {
-        if sig[idx + j as usize] > 0 {
+        if sig[idx + j] > 0 {
             return false;
         }
     }

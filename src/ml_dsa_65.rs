@@ -1,4 +1,15 @@
-use sha2::{Sha256, Sha512, Digest};
+//! High-level ML-DSA-65 API.
+//!
+//! # Modes
+//! - Pure mode: [`Keypair::sign`] / [`Keypair::verify`]
+//! - Pre-hash mode: [`Keypair::prehash_sign`] / [`Keypair::prehash_verify`]
+//! - Internal mode (`acvp-internal`): `sign_internal`, `sign_mu`,
+//!   `verify_internal`, `verify_mu`
+//!
+//! Use [`crate::RandomMode`] to control deterministic vs hedged signing.
+//!
+use crate::prehash::{prehash_bytes, PH};
+use zeroize::ZeroizeOnDrop;
 
 pub const SECRETKEYBYTES: usize = crate::params::ml_dsa_65::SECRETKEYBYTES;
 pub const PUBLICKEYBYTES: usize = crate::params::ml_dsa_65::PUBLICKEYBYTES;
@@ -10,29 +21,33 @@ pub type Signature = [u8; SIGNBYTES];
 /// A pair of private and public keys.
 pub struct Keypair {
     pub secret: SecretKey,
-    pub public: PublicKey
+    pub public: PublicKey,
 }
 
 impl Keypair {
     /// Generate a Keypair instance.
-    /// 
+    ///
     /// # Arguments
-    /// 
-    /// * 'entropy' - optional bytes for determining the generation process
-    /// 
-    /// Returns an instance of Keypair
-    pub fn generate(entropy: Option<&[u8]>) -> Keypair {
+    ///
+    /// * `entropy` - optional bytes for determining the generation process
+    ///
+    /// # Returns
+    /// A new [`Keypair`].
+    ///
+    /// # Errors
+    /// Returns [`crate::Error::InvalidSeedLength`] if `entropy` is provided and has an invalid length.
+    pub fn generate(entropy: Option<&[u8]>) -> Result<Keypair, crate::Error> {
         let mut pk = [0u8; PUBLICKEYBYTES];
         let mut sk = [0u8; SECRETKEYBYTES];
-        crate::sign::ml_dsa_65::keypair(&mut pk, &mut sk, entropy);
-        Keypair {
-            secret: SecretKey::from_bytes(&sk),
-            public: PublicKey::from_bytes(&pk)
-        }
+        crate::sign::ml_dsa_65::keypair(&mut pk, &mut sk, entropy)?;
+        Ok(Keypair {
+            secret: SecretKey::from_bytes(&sk)?,
+            public: PublicKey::from_bytes(&pk)?,
+        })
     }
 
     /// Convert a Keypair to a bytes array.
-    /// 
+    ///
     /// Returns an array containing private and public keys bytes
     pub fn to_bytes(&self) -> [u8; KEYPAIRBYTES] {
         let mut result = [0u8; KEYPAIRBYTES];
@@ -42,301 +57,297 @@ impl Keypair {
     }
 
     /// Create a Keypair from bytes.
-    /// 
+    ///
     /// # Arguments
-    /// 
-    /// * 'bytes' - private and public keys bytes
-    /// 
-    /// Returns a Keypair
-    pub fn from_bytes(bytes: &[u8]) -> Keypair {
-        Keypair {
-            secret: SecretKey::from_bytes(&bytes[..SECRETKEYBYTES]),
-            public: PublicKey::from_bytes(&bytes[SECRETKEYBYTES..])
+    ///
+    /// * `bytes` - private and public keys bytes
+    ///
+    /// # Returns
+    /// A parsed [`Keypair`].
+    ///
+    /// # Errors
+    /// Returns [`crate::Error::InvalidKeyLength`] if `bytes` has an invalid keypair length.
+    pub fn from_bytes(bytes: &[u8]) -> Result<Keypair, crate::Error> {
+        if bytes.len() != KEYPAIRBYTES {
+            return Err(crate::Error::InvalidKeyLength {
+                kind: "ml_dsa_65 keypair",
+                expected: KEYPAIRBYTES,
+                actual: bytes.len(),
+            });
         }
+        Ok(Keypair {
+            secret: SecretKey::from_bytes(&bytes[..SECRETKEYBYTES])?,
+            public: PublicKey::from_bytes(&bytes[SECRETKEYBYTES..])?,
+        })
     }
 
-    /// Compute a signature for a given message.
+    /// Compute a pure-mode ML-DSA signature over `msg`.
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message to sign
-    /// 
-    /// Returns Option<Signature>
-    pub fn sign(&self, msg: &[u8], ctx: Option<&[u8]>, hedged: bool) -> Option<Signature> {
-        self.secret.sign(msg, ctx, hedged)
+    /// * `msg` - message to sign
+    ///
+    /// # Returns
+    /// `Some(signature)` on success, or `None` when input validation fails
+    /// (for example, if `ctx` is longer than 255 bytes).
+    pub fn sign(
+        &self,
+        msg: &[u8],
+        ctx: Option<&[u8]>,
+        rand: crate::RandomMode,
+    ) -> Option<Signature> {
+        self.secret.sign(msg, ctx, rand)
     }
 
     /// Verify a signature for a given message with a public key.
-    /// 
+    ///
     /// # Arguments
-    /// 
-    /// * 'msg' - message that is claimed to be signed
-    /// * 'sig' - signature to verify
-    /// 
-    /// Returns 'true' if the verification process was successful, 'false' otherwise
+    ///
+    /// * `msg` - message that is claimed to be signed
+    /// * `sig` - signature to verify
+    ///
+    /// Returns `true` if verification succeeds, and `false` otherwise
     pub fn verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>) -> bool {
         self.public.verify(msg, sig, ctx)
     }
 
-    /// Compute a signature for a given message.
+    /// Compute a pre-hash-mode ML-DSA signature over `msg`.
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message to sign
-    /// 
-    /// Returns Option<Signature>
-    pub fn prehash_sign(&self, msg: &[u8], ctx: Option<&[u8]>, hedged: bool, ph:crate::PH) -> Option<Signature> {
-        self.secret.prehash_sign(msg, ctx, hedged, ph)
+    /// * `msg` - message to sign
+    ///
+    /// # Returns
+    /// `Some(signature)` on success, or `None` when input validation fails
+    /// (for example, if `ctx` is longer than 255 bytes).
+    pub fn prehash_sign(
+        &self,
+        msg: &[u8],
+        ctx: Option<&[u8]>,
+        rand: crate::RandomMode,
+        ph: PH,
+    ) -> Option<Signature> {
+        self.secret.prehash_sign(msg, ctx, rand, ph)
     }
 
     /// Verify a signature for a given message with a public key.
-    /// 
+    ///
     /// # Arguments
-    /// 
-    /// * 'msg' - message that is claimed to be signed
-    /// * 'sig' - signature to verify
-    /// 
-    /// Returns 'true' if the verification process was successful, 'false' otherwise
-    pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph:crate::PH) -> bool {
+    ///
+    /// * `msg` - message that is claimed to be signed
+    /// * `sig` - signature to verify
+    ///
+    /// Returns `true` if verification succeeds, and `false` otherwise
+    pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph: PH) -> bool {
         self.public.prehash_verify(msg, sig, ctx, ph)
     }
 }
 
 /// Private key.
+#[derive(ZeroizeOnDrop)]
 pub struct SecretKey {
-    pub bytes: [u8; SECRETKEYBYTES]
+    bytes: [u8; SECRETKEYBYTES],
 }
 
 impl SecretKey {
     /// Returns a copy of underlying bytes.
     pub fn to_bytes(&self) -> [u8; SECRETKEYBYTES] {
-       self.bytes.clone() 
+        self.bytes
     }
 
     /// Create a SecretKey from bytes.
-    /// 
+    ///
     /// # Arguments
-    /// 
-    /// * 'bytes' - private key bytes
-    /// 
-    /// Returns a SecretKey
-    pub fn from_bytes(bytes: &[u8]) -> SecretKey {
-        SecretKey {
-            bytes: bytes.try_into().expect("")
-        }
+    ///
+    /// * `bytes` - private key bytes
+    ///
+    /// # Returns
+    /// A parsed [`SecretKey`].
+    ///
+    /// # Errors
+    /// Returns [`crate::Error::InvalidKeyLength`] if `bytes` has an invalid secret-key length.
+    ///
+    /// # Examples
+    /// See [`crate::ml_dsa_44::SecretKey::from_bytes`].
+    pub fn from_bytes(bytes: &[u8]) -> Result<SecretKey, crate::Error> {
+        let bytes = bytes
+            .try_into()
+            .map_err(|_| crate::Error::InvalidKeyLength {
+                kind: "ml_dsa_65 secret key",
+                expected: SECRETKEYBYTES,
+                actual: bytes.len(),
+            })?;
+        Ok(SecretKey { bytes })
     }
 
     /// Compute a signature for a given message.
     ///
     /// # Arguments
     ///
-    /// * 'msg' - message to sign
-    /// * 'ctx' - context string
-    /// * 'hedged' - wether to use RNG or not
-    /// 
-    /// Returns Option<Signature>
-    pub fn sign(&self, msg: &[u8], ctx: Option<&[u8]>, hedged: bool) -> Option<Signature> {
-        match ctx {
-            Some(x) => {
-                if x.len() > 255 {
-                    return None;
-                }
-                let x_len = x.len();
-                let msg_len = msg.len();
-                let mut m = vec![0; msg_len + 2 + x_len];
-                m[1] = x_len as u8;
-                m[2..2+x_len].copy_from_slice(x);
-                m[2+x_len..].copy_from_slice(msg);
-                let mut sig: Signature = [0u8; SIGNBYTES];
-                crate::sign::ml_dsa_65::signature(&mut sig, m.as_slice(), &self.bytes, hedged);
-                Some(sig)
-            },
-            None => {
-                let msg_len = msg.len();
-                let mut m = vec![0; msg_len + 2];
-                m[2..].copy_from_slice(msg);
-                let mut sig: Signature = [0u8; SIGNBYTES];
-                crate::sign::ml_dsa_65::signature(&mut sig, m.as_slice(), &self.bytes, hedged);
-                Some(sig)
-            }
-        }
+    /// * `msg` - message to sign
+    /// * `ctx` - context string
+    /// * `rand` - randomness mode used for signing
+    ///
+    /// # Returns
+    /// `Some(signature)` on success, or `None` when input validation fails.
+    pub fn sign(
+        &self,
+        msg: &[u8],
+        ctx: Option<&[u8]>,
+        rand: crate::RandomMode,
+    ) -> Option<Signature> {
+        let m = crate::build_mprime(msg, ctx, false)?;
+        let mut sig: Signature = [0u8; SIGNBYTES];
+        crate::sign::ml_dsa_65::signature(&mut sig, m.as_slice(), &self.bytes, rand);
+        Some(sig)
     }
-    
+
     /// Compute a signature for a given message.
-    /// 
+    ///
     /// # Arguments
-    /// 
-    /// * 'msg' - message to sign
-    /// * 'ctx' - context string
-    /// * 'hedged' - wether to use RNG or not
-    /// * 'ph' - pre-hash function
-    /// 
-    /// Returns Option<Signature>
-    pub fn prehash_sign(&self, msg: &[u8], ctx: Option<&[u8]>, hedged: bool, ph:crate::PH) -> Option<Signature>  {
-        let mut oid = [0u8; 11];
-        let mut phm: Vec<u8> = Vec::new();
-        match ph {
-           crate::PH::SHA256 => {
-                oid.copy_from_slice(&[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01]);
-                phm.extend_from_slice(Sha256::digest(msg).as_slice());
-            },
-           crate::PH::SHA512 => {
-                oid.copy_from_slice(&[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03]);
-                phm.extend_from_slice(Sha512::digest(msg).as_slice());
-            },
-        }
-        match ctx {
-            Some(x) => {
-                if x.len() > 255 {
-                    return None;
-                }
-                let x_len = x.len();
-                let phm_len = phm.len();
-                let mut m = vec![0; 2 + x_len + 11 + phm_len];
-                m[0] = 1;
-                m[1] = x_len as u8;
-                m[2..2+x_len].copy_from_slice(x);
-                m[2+x_len..2+x_len+11].copy_from_slice(&oid);
-                m[2+x_len+11..].copy_from_slice(phm.as_slice());
-                let mut sig: Signature = [0u8; SIGNBYTES];
-                crate::sign::ml_dsa_65::signature(&mut sig, m.as_slice(), &self.bytes, hedged);
-                Some(sig)
-            },
-            None => {
-                let phm_len = phm.len();
-                let mut m = vec![0; 2 + 11 + phm_len];
-                m[0] = 1;
-                m[2..2+11].copy_from_slice(&oid);
-                m[2+11..].copy_from_slice(phm.as_slice());
-                let mut sig: Signature = [0u8; SIGNBYTES];
-                crate::sign::ml_dsa_65::signature(&mut sig, m.as_slice(), &self.bytes, hedged);
-                Some(sig)
-            }
-        }
+    ///
+    /// * `msg` - message to sign
+    /// * `ctx` - context string
+    /// * `rand` - randomness mode used for signing
+    /// * `ph` - pre-hash function
+    ///
+    /// # Returns
+    /// `Some(signature)` on success, or `None` when input validation fails.
+    pub fn prehash_sign(
+        &self,
+        msg: &[u8],
+        ctx: Option<&[u8]>,
+        rand: crate::RandomMode,
+        ph: PH,
+    ) -> Option<Signature> {
+        let phm = prehash_bytes(ph, msg);
+        let m = crate::build_mprime(phm.as_slice(), ctx, true)?;
+        let mut sig: Signature = [0u8; SIGNBYTES];
+        crate::sign::ml_dsa_65::signature(&mut sig, m.as_slice(), &self.bytes, rand);
+        Some(sig)
+    }
+
+    #[cfg(feature = "acvp-internal")]
+    /// Compute an internal-mode signature over already prepared input.
+    ///
+    /// This API is intended for ACVP/internal testing workflows.
+    pub fn sign_internal(&self, msg: &[u8], rand: crate::RandomMode) -> Option<Signature> {
+        let mut sig: Signature = [0u8; SIGNBYTES];
+        crate::sign::ml_dsa_65::signature(&mut sig, msg, &self.bytes, rand);
+        Some(sig)
+    }
+
+    #[cfg(feature = "acvp-internal")]
+    /// Compute an internal-mode signature over a precomputed `mu` digest.
+    ///
+    /// This API is intended for ACVP/internal testing workflows.
+    pub fn sign_mu(&self, mu: &[u8], rand: crate::RandomMode) -> Option<Signature> {
+        let mut sig: Signature = [0u8; SIGNBYTES];
+        crate::sign::ml_dsa_65::signature_mu(&mut sig, mu, &self.bytes, rand);
+        Some(sig)
     }
 }
 
 pub struct PublicKey {
-    pub bytes: [u8; PUBLICKEYBYTES]
+    bytes: [u8; PUBLICKEYBYTES],
 }
 
 impl PublicKey {
     /// Returns a copy of underlying bytes.
     pub fn to_bytes(&self) -> [u8; PUBLICKEYBYTES] {
-        self.bytes.clone()
+        self.bytes
     }
 
     /// Create a PublicKey from bytes.
-    /// 
+    ///
     /// # Arguments
-    /// 
-    /// * 'bytes' - public key bytes
-    /// 
-    /// Returns a PublicKey
-    pub fn from_bytes(bytes: &[u8]) -> PublicKey {
-        PublicKey {
-            bytes: bytes.try_into().expect("")
-        }
+    ///
+    /// * `bytes` - public key bytes
+    ///
+    /// # Returns
+    /// A parsed [`PublicKey`].
+    ///
+    /// # Errors
+    /// Returns [`crate::Error::InvalidKeyLength`] if `bytes` has an invalid public-key length.
+    pub fn from_bytes(bytes: &[u8]) -> Result<PublicKey, crate::Error> {
+        let bytes = bytes
+            .try_into()
+            .map_err(|_| crate::Error::InvalidKeyLength {
+                kind: "ml_dsa_65 public key",
+                expected: PUBLICKEYBYTES,
+                actual: bytes.len(),
+            })?;
+        Ok(PublicKey { bytes })
     }
 
     /// Verify a signature for a given message with a public key.
-    /// 
+    ///
     /// # Arguments
-    /// 
-    /// * 'msg' - message that is claimed to be signed
-    /// * 'sig' - signature to verify
-    /// * 'ctx' - context string
-    /// 
-    /// Returns 'true' if the verification process was successful, 'false' otherwise
+    ///
+    /// * `msg` - message that is claimed to be signed
+    /// * `sig` - signature to verify
+    /// * `ctx` - context string
+    ///
+    /// Returns `true` if verification succeeds, and `false` otherwise
     pub fn verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>) -> bool {
         if sig.len() != SIGNBYTES {
             return false;
         }
-        match ctx {
-            Some(x) => {
-                if x.len() > 255 {
-                    return false;
-                }
-                let x_len = x.len();
-                let msg_len = msg.len();
-                let mut m = vec![0; msg_len + 2 + x_len];
-                m[1] = x_len as u8;
-                m[2..2+x_len].copy_from_slice(x);
-                m[2+x_len..].copy_from_slice(msg);
-                crate::sign::ml_dsa_65::verify(sig, m.as_slice(), &self.bytes)
-            },
-            None => {
-                let msg_len = msg.len();
-                let mut m = vec![0; msg_len + 2];
-                m[2..].copy_from_slice(msg);
-                crate::sign::ml_dsa_65::verify(sig, m.as_slice(), &self.bytes)
-            }
-        }
+        let Some(m) = crate::build_mprime(msg, ctx, false) else {
+            return false;
+        };
+        crate::sign::ml_dsa_65::verify(sig, m.as_slice(), &self.bytes)
     }
 
     /// Verify a signature for a given message with a public key.
-    /// 
+    ///
     /// # Arguments
-    /// 
-    /// * 'msg' - message that is claimed to be signed
-    /// * 'sig' - signature to verify
-    /// * 'ctx' - context string
-    /// * 'ph' - pre-hash function
-    /// 
-    /// Returns 'true' if the verification process was successful, 'false' otherwise
-    pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph:crate::PH) -> bool {
+    ///
+    /// * `msg` - message that is claimed to be signed
+    /// * `sig` - signature to verify
+    /// * `ctx` - context string
+    /// * `ph` - pre-hash function
+    ///
+    /// Returns `true` if verification succeeds, and `false` otherwise
+    pub fn prehash_verify(&self, msg: &[u8], sig: &[u8], ctx: Option<&[u8]>, ph: PH) -> bool {
         if sig.len() != SIGNBYTES {
             return false;
         }
-        let mut oid = [0u8; 11];
-        let mut phm: Vec<u8> = Vec::new();
-        match ph {
-           crate::PH::SHA256 => {
-                oid.copy_from_slice(&[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01]);
-                phm.extend_from_slice(Sha256::digest(msg).as_slice());
-            },
-           crate::PH::SHA512 => {
-                oid.copy_from_slice(&[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03]);
-                phm.extend_from_slice(Sha512::digest(msg).as_slice());
-            },
-        }
-        match ctx {
-            Some(x) => {
-                if x.len() > 255 {
-                    return false;
-                }
-                let x_len = x.len();
-                let phm_len = phm.len();
-                let mut m = vec![0; 2 + x_len + 11 + phm_len];
-                m[0] = 1;
-                m[1] = x_len as u8;
-                m[2..2+x_len].copy_from_slice(x);
-                m[2+x_len..2+x_len+11].copy_from_slice(&oid);
-                m[2+x_len+11..].copy_from_slice(phm.as_slice());
-                crate::sign::ml_dsa_65::verify(sig, m.as_slice(), &self.bytes)
-            },
-            None => {
-                let phm_len = phm.len();
-                let mut m = vec![0; 2 + 11 + phm_len];
-                m[0] = 1;
-                m[2..2+11].copy_from_slice(&oid);
-                m[2+11..].copy_from_slice(phm.as_slice());
-                crate::sign::ml_dsa_65::verify(sig, m.as_slice(), &self.bytes)
-            }
-        }
+        let phm = prehash_bytes(ph, msg);
+        let Some(m) = crate::build_mprime(&phm, ctx, true) else {
+            return false;
+        };
+        crate::sign::ml_dsa_65::verify(sig, m.as_slice(), &self.bytes)
+    }
+
+    #[cfg(feature = "acvp-internal")]
+    /// Verify an internal-mode signature over already prepared input.
+    ///
+    /// This API is intended for ACVP/internal testing workflows.
+    pub fn verify_internal(&self, msg: &[u8], sig: &[u8]) -> bool {
+        crate::sign::ml_dsa_65::verify(sig, msg, &self.bytes)
+    }
+
+    #[cfg(feature = "acvp-internal")]
+    /// Verify an internal-mode signature over a precomputed `mu` digest.
+    ///
+    /// This API is intended for ACVP/internal testing workflows.
+    pub fn verify_mu(&self, mu: &[u8], sig: &[u8]) -> bool {
+        crate::sign::ml_dsa_65::verify_mu(sig, mu, &self.bytes)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Keypair;
+    use super::{Keypair, PublicKey, SecretKey, SIGNBYTES};
+    use crate::prehash::PH;
     #[test]
     fn self_verify_hedged() {
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
-        let keys = Keypair::generate(None);
-        let sig = keys.sign(&msg, None, true);
+        let keys = Keypair::generate(None).unwrap();
+        let sig = keys.sign(&msg, None, crate::RandomMode::Hedged);
         assert!(keys.verify(&msg, &sig.unwrap(), None));
     }
     #[test]
@@ -344,8 +355,8 @@ mod tests {
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
-        let keys = Keypair::generate(None);
-        let sig = keys.sign(&msg, None, false);
+        let keys = Keypair::generate(None).unwrap();
+        let sig = keys.sign(&msg, None, crate::RandomMode::Deterministic);
         assert!(keys.verify(&msg, &sig.unwrap(), None));
     }
     #[test]
@@ -353,17 +364,128 @@ mod tests {
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
-        let keys = Keypair::generate(None);
-        let sig = keys.prehash_sign(&msg, None, true, crate::PH::SHA256);
-        assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, crate::PH::SHA256));
+        let keys = Keypair::generate(None).unwrap();
+        let sig = keys.prehash_sign(&msg, None, crate::RandomMode::Hedged, PH::SHA256);
+        assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, PH::SHA256));
     }
     #[test]
     fn self_verify_prehash() {
         const MSG_BYTES: usize = 94;
         let mut msg = [0u8; MSG_BYTES];
         crate::random_bytes(&mut msg, MSG_BYTES);
-        let keys = Keypair::generate(None);
-        let sig = keys.prehash_sign(&msg, None, false, crate::PH::SHA256);
-        assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, crate::PH::SHA256));
+        let keys = Keypair::generate(None).unwrap();
+        let sig = keys.prehash_sign(&msg, None, crate::RandomMode::Deterministic, PH::SHA256);
+        assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, PH::SHA256));
+    }
+
+    #[test]
+    fn verify_rejects_tampered_inputs() {
+        let msg = b"tamper-check";
+        let keys = Keypair::generate(None).unwrap();
+        let sig = keys
+            .sign(msg, None, crate::RandomMode::Deterministic)
+            .unwrap();
+        assert!(keys.verify(msg, &sig, None));
+
+        let mut bad_msg = msg.to_vec();
+        bad_msg[0] ^= 1;
+        assert!(!keys.verify(&bad_msg, &sig, None));
+
+        let mut bad_sig = sig;
+        bad_sig[0] ^= 1;
+        assert!(!keys.verify(msg, &bad_sig, None));
+
+        let mut bad_pk = keys.public.to_bytes();
+        bad_pk[0] ^= 1;
+        let bad_public = PublicKey::from_bytes(&bad_pk).unwrap();
+        assert!(!bad_public.verify(msg, &sig, None));
+    }
+
+    #[test]
+    fn verify_rejects_wrong_signature_length() {
+        let msg = b"length-check";
+        let keys = Keypair::generate(None).unwrap();
+        let sig = keys
+            .sign(msg, None, crate::RandomMode::Deterministic)
+            .unwrap();
+
+        assert!(!keys.verify(msg, &sig[..SIGNBYTES - 1], None));
+
+        let mut long_sig = vec![0u8; SIGNBYTES + 1];
+        long_sig[..SIGNBYTES].copy_from_slice(&sig);
+        assert!(!keys.verify(msg, &long_sig, None));
+    }
+
+    #[test]
+    fn ctx_length_bounds() {
+        let msg = b"context-length-check";
+        let keys = Keypair::generate(None).unwrap();
+
+        let ctx_ok = vec![0x42; 255];
+        assert!(keys
+            .sign(msg, Some(&ctx_ok), crate::RandomMode::Deterministic)
+            .is_some());
+        assert!(keys
+            .prehash_sign(
+                msg,
+                Some(&ctx_ok),
+                crate::RandomMode::Deterministic,
+                PH::SHA256
+            )
+            .is_some());
+
+        let ctx_too_long = vec![0x42; 256];
+        assert!(keys
+            .sign(msg, Some(&ctx_too_long), crate::RandomMode::Deterministic)
+            .is_none());
+        assert!(keys
+            .prehash_sign(
+                msg,
+                Some(&ctx_too_long),
+                crate::RandomMode::Deterministic,
+                PH::SHA256,
+            )
+            .is_none());
+    }
+
+    #[test]
+    fn deterministic_signing_is_stable() {
+        let msg = b"deterministic";
+        let keys = Keypair::generate(None).unwrap();
+
+        let sig1 = keys
+            .sign(msg, Some(b"ctx"), crate::RandomMode::Deterministic)
+            .unwrap();
+        let sig2 = keys
+            .sign(msg, Some(b"ctx"), crate::RandomMode::Deterministic)
+            .unwrap();
+        assert_eq!(sig1, sig2);
+    }
+
+    #[test]
+    fn prehash_mode_mismatch_fails() {
+        let msg = b"prehash-mismatch";
+        let keys = Keypair::generate(None).unwrap();
+
+        let sig = keys
+            .prehash_sign(msg, None, crate::RandomMode::Deterministic, PH::SHA256)
+            .unwrap();
+        assert!(!keys.prehash_verify(msg, &sig, None, PH::SHA512));
+    }
+
+    #[test]
+    fn serialization_roundtrip() {
+        let keys = Keypair::generate(None).unwrap();
+        let keypair_bytes = keys.to_bytes();
+        let decoded = Keypair::from_bytes(&keypair_bytes).unwrap();
+        assert_eq!(decoded.public.to_bytes(), keys.public.to_bytes());
+        assert_eq!(decoded.secret.to_bytes(), keys.secret.to_bytes());
+
+        let sk_bytes = keys.secret.to_bytes();
+        let pk_bytes = keys.public.to_bytes();
+        let sk = SecretKey::from_bytes(&sk_bytes).unwrap();
+        let pk = PublicKey::from_bytes(&pk_bytes).unwrap();
+        assert_eq!(sk.to_bytes(), sk_bytes);
+        assert_eq!(pk.to_bytes(), pk_bytes);
     }
 }

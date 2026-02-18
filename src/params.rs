@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 // Specification defined constans
 pub const Q: i32 = (1 << 23) - (1 << 13) + 1; //prime defining the field
 pub const N: i32 = 256; //ring defining polynomial degree

@@ -1,24 +1,47 @@
 [package]
 name = "crystals-dilithium"
-version = "1.0.0"
+version = "2.0.0"
 edition = "2021"
-license = "GPL-3.0"
-description = "Pure RUST implementation of CRYSTALS-Dilithium digital signature scheme"
+rust-version = "1.78"
+license = "GPL-3.0-only"
+description = "Pure Rust implementation of CRYSTALS-Dilithium and ML-DSA (FIPS 204) digital signatures"
 readme = "README.md"
 homepage = "https://www.quantumblockchains.io/"
 repository = "https://github.com/Quantum-Blockchains/dilithium"
-keywords = ["cryptography", "quantum", "dilithium", "digital-signatures", "security"]
+keywords = ["cryptography", "post-quantum", "dilithium", "ml-dsa", "fips-204"]
 categories = ["cryptography", "post-quantum-cryptography"]
+exclude = [
+  "tests/json-files/**",
+  ".github/**",
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+acvp-internal = []
+
 [dependencies]
-rand = "0.7.3"
-sha2 = "0.10.8"
+rand = "0.8.0"
+sha2 = "0.10.9"
+sha3 = "0.10.8"
+zeroize = { version = "1", features = ["zeroize_derive"] }
 
 [dev-dependencies]
-criterion = { version = "0.4", features = ["html_reports"] }
+criterion = { version = "0.8", features = ["html_reports"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = { version = "0.4", features = ["serde"] }
 
 [[bench]]
 name = "dilithium_benchmarks"
 harness = false
+
+[[bench]]
+name = "mldsa_benchmarks"
+harness = false
+
+[[test]]
+name = "acvp_internal"
+path = "tests/acvp_vectors.rs"
+required-features = ["acvp-internal"]

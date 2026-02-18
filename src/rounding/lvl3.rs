@@ -1,4 +1,4 @@
-use crate::params::{Q, lvl3};
+use crate::params::{lvl3, Q};
 const GAMMA2: i32 = lvl3::GAMMA2 as i32;
 
 /// For finite field element a, compute high and low bits a0, a1 such that a mod^+ Q = a1*ALPHA + a0 with -ALPHA/2 < a0 <= ALPHA/2 except if a1 = (Q-1)/ALPHA where we set a1 = 0 and -ALPHA/2 <= a0 = a mod^+ Q - Q < 0. Assumes a to be standard
@@ -21,24 +21,23 @@ pub fn decompose(a: i32) -> (i32, i32) {
 ///
 /// Returns 1 if overflow.
 pub fn make_hint(a0: i32, a1: i32) -> i32 {
-  if a0 > GAMMA2 || a0 < -GAMMA2 || (a0 == -GAMMA2 && a1 != 0) {
-    return 1;
-  }
-  0
+    if !(-GAMMA2..=GAMMA2).contains(&a0) || (a0 == -GAMMA2 && a1 != 0) {
+        return 1;
+    }
+    0
 }
 
 /// Correct high bits according to hint.
 ///
 /// Returns corrected high bits.
-pub fn use_hint(a: i32, hint: i32) -> i32
-{
+pub fn use_hint(a: i32, hint: i32) -> i32 {
     let (a0, a1) = decompose(a);
     if hint == 0 {
         return a1;
     }
     if a0 > 0 {
-      return (a1 + 1) & 15;
+        (a1 + 1) & 15
     } else {
-      return (a1 - 1) & 15;
+        (a1 - 1) & 15
     }
 }

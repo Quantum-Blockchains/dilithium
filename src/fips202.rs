@@ -4,19 +4,10 @@ pub const SHAKE256_RATE: usize = 136;
 const NROUNDS: usize = 24;
 
 /// 1600-bit state of the algorithm, with an index of curent position.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub struct KeccakState {
     pub s: [u64; 25],
     pub pos: usize,
-}
-
-impl Default for KeccakState {
-    fn default() -> Self {
-        KeccakState {
-            s: [0u64; 25],
-            pos: 0,
-        }
-    }
 }
 
 impl KeccakState {
@@ -28,18 +19,19 @@ impl KeccakState {
 }
 
 /// No rolling defined in the language so got to do it ourselfs :(
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * 'a' - number to rotate right
 /// * 'offset' - how many places to rotate
-/// 
+///
 /// Returns the rotated number
 fn rol(a: u64, offset: u64) -> u64 {
     (a << offset) ^ (a >> (64 - offset))
 }
 
 /// Load 8 bytes into uint64_t in little-endian order
+#[allow(clippy::needless_range_loop)]
 pub fn load64(x: &[u8]) -> u64 {
     let mut r = 0u64;
     for i in 0..8 {
@@ -49,9 +41,10 @@ pub fn load64(x: &[u8]) -> u64 {
 }
 
 /// Store a 64-bit integer to array of 8 bytes in little-endian order
+#[allow(clippy::needless_range_loop)]
 pub fn store64(x: &mut [u8], u: u64) {
     for i in 0..8 {
-        x[i] = (u >> 8 * i) as u8;
+        x[i] = (u >> (8 * i)) as u8;
     }
 }
 
@@ -332,7 +325,7 @@ fn keccak_absorb(state: &mut KeccakState, r: usize, input: &[u8], mut inlen: usi
     let mut pos = state.pos;
     while pos + inlen >= r {
         for i in pos..r {
-            state.s[i / 8] ^= (input[idx] as u64) << 8 * (i % 8);
+            state.s[i / 8] ^= (input[idx] as u64) << (8 * (i % 8));
             idx += 1;
         }
         inlen -= r - pos;
@@ -341,7 +334,7 @@ fn keccak_absorb(state: &mut KeccakState, r: usize, input: &[u8], mut inlen: usi
     }
     let mut i = pos;
     while i < pos + inlen {
-        state.s[i / 8] ^= (input[idx] as u64) << 8 * (i % 8);
+        state.s[i / 8] ^= (input[idx] as u64) << (8 * (i % 8));
         idx += 1;
         i += 1
     }
@@ -350,7 +343,7 @@ fn keccak_absorb(state: &mut KeccakState, r: usize, input: &[u8], mut inlen: usi
 
 /// Finalize absorb step.
 fn keccak_finalize(s: &mut [u64; 25], pos: usize, r: usize, p: u8) {
-    s[pos / 8] ^= (p as u64) << 8 * (pos % 8);
+    s[pos / 8] ^= (p as u64) << (8 * (pos % 8));
     s[r / 8 - 1] ^= 1u64 << 63;
 }
 
@@ -375,7 +368,7 @@ fn keccak_squeeze(
         while i < r && i < pos + outlen {
             // println!("i = {}", i);
             // println!("out[idx] przed przypisaniem: {}", out[idx]);
-            out[idx] = (s[i / 8] >> 8 * (i % 8)) as u8;
+            out[idx] = (s[i / 8] >> (8 * (i % 8))) as u8;
             // println!("out[idx] po przypisaniu: {}", out[idx]);
             idx += 1;
             i += 1;
@@ -384,7 +377,7 @@ fn keccak_squeeze(
         pos = i;
     }
 
-    return pos;
+    pos
 }
 
 /// Absorb step of Keccak; non-incremental, starts by zeroeing the state.
@@ -401,10 +394,10 @@ fn keccak_absorb_once(s: &mut [u64; 25], r: usize, input: &[u8], mut inlen: usiz
     }
 
     for i in 0..inlen {
-        s[i / 8] ^= (input[idx + i] as u64) << 8 * (i % 8);
+        s[i / 8] ^= (input[idx + i] as u64) << (8 * (i % 8));
     }
 
-    s[inlen / 8] ^= (p as u64) << 8 * (inlen % 8);
+    s[inlen / 8] ^= (p as u64) << (8 * (inlen % 8));
     s[(r - 1) / 8] ^= 1u64 << 63;
 }
 
@@ -430,7 +423,7 @@ pub fn shake128_absorb(state: &mut KeccakState, input: &[u8], inlen: usize) {
 
 /// Finalize absorb step of the SHAKE128 XOF.
 pub fn shake128_finalize(state: &mut KeccakState) {
-    keccak_finalize(&mut state.s, state.pos as usize, SHAKE128_RATE, 0x1F);
+    keccak_finalize(&mut state.s, state.pos, SHAKE128_RATE, 0x1F);
     state.pos = SHAKE128_RATE;
 }
 
