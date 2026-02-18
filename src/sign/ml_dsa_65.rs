@@ -386,37 +386,4 @@ mod tests {
         super::signature(&mut sig, &msg, &sk, crate::RandomMode::Deterministic);
         assert!(super::verify(&sig, &msg, &pk));
     }
-
-    //    #[test]
-    //    fn keypair() {
-    //        let seed: [u8; crate::params::SEEDBYTES] = [];
-    //        let mut pk = [0u8; crate::params::ml_dsa_65::PUBLICKEYBYTES];
-    //        let mut sk = [0u8; crate::params::ml_dsa_65::SECRETKEYBYTES];
-    //        super::keypair(&mut pk, &mut sk, Some(&seed)).unwrap();
-
-    //        let test_pk: [u8; crate::params::ml_dsa_65::PUBLICKEYBYTES] = [];
-    //        let test_sk: [u8; crate::params::ml_dsa_65::SECRETKEYBYTES] = [];
-    //        assert_eq!(test_pk, pk);
-    //        assert_eq!(test_sk, sk);
-    //        assert_eq!(pk[..crate::params::SEEDBYTES], sk[..crate::params::SEEDBYTES]);
-    //    }
-
-    //    #[test]
-    //    fn signature() {
-    //        let msg: [u8; 33] = [];
-    //        let sk: [u8; crate::params::ml_dsa_65::SECRETKEYBYTES] = [];
-    //        let mut sig = [0u8; crate::params::ml_dsa_65::SIGNBYTES];
-    //        super::signature(&mut sig, &msg, &sk, false);
-
-    //        let test_sig: [u8; crate::params::ml_dsa_65::SIGNBYTES + 33] = [];
-    //        assert!(test_sig[..crate::params::ml_dsa_65::SIGNBYTES] == sig);
-    //    }
-
-    //    #[test]
-    //    fn verify() {
-    //        let msg: [u8; 33] = [];
-    //        let sig: [u8; crate::params::ml_dsa_65::SIGNBYTES + 33] = [];
-    //        let pk: [u8; crate::params::ml_dsa_65::PUBLICKEYBYTES] = [];
-    //        assert!(super::verify(&sig[..crate::params::ml_dsa_65::SIGNBYTES], &msg, &pk));
-    //    }
 }

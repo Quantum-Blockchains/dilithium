@@ -339,7 +339,7 @@ impl PublicKey {
 
 #[cfg(test)]
 mod tests {
-    use super::Keypair;
+    use super::{Keypair, PublicKey, SecretKey, SIGNBYTES};
     use crate::prehash::PH;
     #[test]
     fn self_verify_hedged() {
@@ -376,5 +376,116 @@ mod tests {
         let keys = Keypair::generate(None).unwrap();
         let sig = keys.prehash_sign(&msg, None, crate::RandomMode::Deterministic, PH::SHA256);
         assert!(keys.prehash_verify(&msg, &sig.unwrap(), None, PH::SHA256));
+    }
+
+    #[test]
+    fn verify_rejects_tampered_inputs() {
+        let msg = b"tamper-check";
+        let keys = Keypair::generate(None).unwrap();
+        let sig = keys
+            .sign(msg, None, crate::RandomMode::Deterministic)
+            .unwrap();
+        assert!(keys.verify(msg, &sig, None));
+
+        let mut bad_msg = msg.to_vec();
+        bad_msg[0] ^= 1;
+        assert!(!keys.verify(&bad_msg, &sig, None));
+
+        let mut bad_sig = sig;
+        bad_sig[0] ^= 1;
+        assert!(!keys.verify(msg, &bad_sig, None));
+
+        let mut bad_pk = keys.public.to_bytes();
+        bad_pk[0] ^= 1;
+        let bad_public = PublicKey::from_bytes(&bad_pk).unwrap();
+        assert!(!bad_public.verify(msg, &sig, None));
+    }
+
+    #[test]
+    fn verify_rejects_wrong_signature_length() {
+        let msg = b"length-check";
+        let keys = Keypair::generate(None).unwrap();
+        let sig = keys
+            .sign(msg, None, crate::RandomMode::Deterministic)
+            .unwrap();
+
+        assert!(!keys.verify(msg, &sig[..SIGNBYTES - 1], None));
+
+        let mut long_sig = vec![0u8; SIGNBYTES + 1];
+        long_sig[..SIGNBYTES].copy_from_slice(&sig);
+        assert!(!keys.verify(msg, &long_sig, None));
+    }
+
+    #[test]
+    fn ctx_length_bounds() {
+        let msg = b"context-length-check";
+        let keys = Keypair::generate(None).unwrap();
+
+        let ctx_ok = vec![0x42; 255];
+        assert!(keys
+            .sign(msg, Some(&ctx_ok), crate::RandomMode::Deterministic)
+            .is_some());
+        assert!(keys
+            .prehash_sign(
+                msg,
+                Some(&ctx_ok),
+                crate::RandomMode::Deterministic,
+                PH::SHA256
+            )
+            .is_some());
+
+        let ctx_too_long = vec![0x42; 256];
+        assert!(keys
+            .sign(msg, Some(&ctx_too_long), crate::RandomMode::Deterministic)
+            .is_none());
+        assert!(keys
+            .prehash_sign(
+                msg,
+                Some(&ctx_too_long),
+                crate::RandomMode::Deterministic,
+                PH::SHA256,
+            )
+            .is_none());
+    }
+
+    #[test]
+    fn deterministic_signing_is_stable() {
+        let msg = b"deterministic";
+        let keys = Keypair::generate(None).unwrap();
+
+        let sig1 = keys
+            .sign(msg, Some(b"ctx"), crate::RandomMode::Deterministic)
+            .unwrap();
+        let sig2 = keys
+            .sign(msg, Some(b"ctx"), crate::RandomMode::Deterministic)
+            .unwrap();
+        assert_eq!(sig1, sig2);
+    }
+
+    #[test]
+    fn prehash_mode_mismatch_fails() {
+        let msg = b"prehash-mismatch";
+        let keys = Keypair::generate(None).unwrap();
+
+        let sig = keys
+            .prehash_sign(msg, None, crate::RandomMode::Deterministic, PH::SHA256)
+            .unwrap();
+        assert!(!keys.prehash_verify(msg, &sig, None, PH::SHA512));
+    }
+
+    #[test]
+    fn serialization_roundtrip() {
+        let keys = Keypair::generate(None).unwrap();
+        let keypair_bytes = keys.to_bytes();
+        let decoded = Keypair::from_bytes(&keypair_bytes).unwrap();
+        assert_eq!(decoded.public.to_bytes(), keys.public.to_bytes());
+        assert_eq!(decoded.secret.to_bytes(), keys.secret.to_bytes());
+
+        let sk_bytes = keys.secret.to_bytes();
+        let pk_bytes = keys.public.to_bytes();
+        let sk = SecretKey::from_bytes(&sk_bytes).unwrap();
+        let pk = PublicKey::from_bytes(&pk_bytes).unwrap();
+        assert_eq!(sk.to_bytes(), sk_bytes);
+        assert_eq!(pk.to_bytes(), pk_bytes);
     }
 }
