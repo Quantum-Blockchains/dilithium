@@ -2,7 +2,7 @@
 name = "crystals-dilithium"
 version = "2.0.0"
 edition = "2021"
-rust-version = "1.78"
+rust-version = "1.76"
 license = "GPL-3.0-only"
 description = "Pure Rust implementation of CRYSTALS-Dilithium and ML-DSA (FIPS 204) digital signatures"
 readme = "README.md"
@@ -28,7 +28,7 @@ sha3 = "0.10.8"
 zeroize = { version = "1", features = ["zeroize_derive"] }
 
 [dev-dependencies]
-criterion = { version = "0.8", features = ["html_reports"] }
+criterion = { version = "0.5.1", default-features = false, features = ["html_reports"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 hex = { version = "0.4", features = ["serde"] }
